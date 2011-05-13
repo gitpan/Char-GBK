@@ -18,7 +18,7 @@ use Egbk;
 
 BEGIN { eval q{ use vars qw($VERSION) } }
 
-$VERSION = sprintf '%d.%02d', q$Revision: 0.72 $ =~ m/(\d+)/oxmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.73 $ =~ m/(\d+)/oxmsg;
 
 # poor Symbol.pm - substitute of real Symbol.pm
 BEGIN {
@@ -1000,7 +1000,7 @@ sub escape {
 
 # tr/// or y///
 
-    # about [cdsbB]* (/B modifier)
+    # about [cdsrbB]* (/B modifier)
     #
     # P.559 appendix C
     # of ISBN 4-89052-384-7 Programming perl
@@ -1010,7 +1010,7 @@ sub escape {
         my $ope = $1;
 
         #        $1   $2               $3   $4               $5   $6
-        if (/\G (\#) ((?:$qq_char)*?) (\#) ((?:$qq_char)*?) (\#) ([cdsbB]*) /oxgc) { # tr# # #
+        if (/\G (\#) ((?:$qq_char)*?) (\#) ((?:$qq_char)*?) (\#) ([cdsrbB]*) /oxgc) { # tr# # #
             my @tr = ($tr_variable,$2);
             return e_tr(@tr,'',$4,$6);
         }
@@ -1021,53 +1021,53 @@ sub escape {
                 elsif (/\G (\() ((?:$qq_paren)*?) (\)) /oxgc) {
                     my @tr = ($tr_variable,$2);
                     while (not /\G \z/oxgc) {
-                        if    (/\G (\s+|\#.*)                               /oxgc) { $e .= $1; }
-                        elsif (/\G (\() ((?:$qq_paren)*?)   (\)) ([cdsbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr ( ) ( )
-                        elsif (/\G (\{) ((?:$qq_brace)*?)   (\}) ([cdsbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr ( ) { }
-                        elsif (/\G (\[) ((?:$qq_bracket)*?) (\]) ([cdsbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr ( ) [ ]
-                        elsif (/\G (\<) ((?:$qq_angle)*?)   (\>) ([cdsbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr ( ) < >
-                        elsif (/\G (\S) ((?:$qq_char)*?)    (\1) ([cdsbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr ( ) * *
+                        if    (/\G (\s+|\#.*)                                /oxgc) { $e .= $1; }
+                        elsif (/\G (\() ((?:$qq_paren)*?)   (\)) ([cdsrbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr ( ) ( )
+                        elsif (/\G (\{) ((?:$qq_brace)*?)   (\}) ([cdsrbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr ( ) { }
+                        elsif (/\G (\[) ((?:$qq_bracket)*?) (\]) ([cdsrbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr ( ) [ ]
+                        elsif (/\G (\<) ((?:$qq_angle)*?)   (\>) ([cdsrbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr ( ) < >
+                        elsif (/\G (\S) ((?:$qq_char)*?)    (\1) ([cdsrbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr ( ) * *
                     }
                     die "$__FILE__: Transliteration replacement not terminated";
                 }
                 elsif (/\G (\{) ((?:$qq_brace)*?) (\}) /oxgc) {
                     my @tr = ($tr_variable,$2);
                     while (not /\G \z/oxgc) {
-                        if    (/\G (\s+|\#.*)                               /oxgc) { $e .= $1; }
-                        elsif (/\G (\() ((?:$qq_paren)*?)   (\)) ([cdsbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr { } ( )
-                        elsif (/\G (\{) ((?:$qq_brace)*?)   (\}) ([cdsbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr { } { }
-                        elsif (/\G (\[) ((?:$qq_bracket)*?) (\]) ([cdsbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr { } [ ]
-                        elsif (/\G (\<) ((?:$qq_angle)*?)   (\>) ([cdsbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr { } < >
-                        elsif (/\G (\S) ((?:$qq_char)*?)    (\1) ([cdsbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr { } * *
+                        if    (/\G (\s+|\#.*)                                /oxgc) { $e .= $1; }
+                        elsif (/\G (\() ((?:$qq_paren)*?)   (\)) ([cdsrbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr { } ( )
+                        elsif (/\G (\{) ((?:$qq_brace)*?)   (\}) ([cdsrbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr { } { }
+                        elsif (/\G (\[) ((?:$qq_bracket)*?) (\]) ([cdsrbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr { } [ ]
+                        elsif (/\G (\<) ((?:$qq_angle)*?)   (\>) ([cdsrbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr { } < >
+                        elsif (/\G (\S) ((?:$qq_char)*?)    (\1) ([cdsrbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr { } * *
                     }
                     die "$__FILE__: Transliteration replacement not terminated";
                 }
                 elsif (/\G (\[) ((?:$qq_bracket)*?) (\]) /oxgc) {
                     my @tr = ($tr_variable,$2);
                     while (not /\G \z/oxgc) {
-                        if    (/\G (\s+|\#.*)                               /oxgc) { $e .= $1; }
-                        elsif (/\G (\() ((?:$qq_paren)*?)   (\)) ([cdsbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr [ ] ( )
-                        elsif (/\G (\{) ((?:$qq_brace)*?)   (\}) ([cdsbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr [ ] { }
-                        elsif (/\G (\[) ((?:$qq_bracket)*?) (\]) ([cdsbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr [ ] [ ]
-                        elsif (/\G (\<) ((?:$qq_angle)*?)   (\>) ([cdsbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr [ ] < >
-                        elsif (/\G (\S) ((?:$qq_char)*?)    (\1) ([cdsbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr [ ] * *
+                        if    (/\G (\s+|\#.*)                                /oxgc) { $e .= $1; }
+                        elsif (/\G (\() ((?:$qq_paren)*?)   (\)) ([cdsrbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr [ ] ( )
+                        elsif (/\G (\{) ((?:$qq_brace)*?)   (\}) ([cdsrbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr [ ] { }
+                        elsif (/\G (\[) ((?:$qq_bracket)*?) (\]) ([cdsrbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr [ ] [ ]
+                        elsif (/\G (\<) ((?:$qq_angle)*?)   (\>) ([cdsrbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr [ ] < >
+                        elsif (/\G (\S) ((?:$qq_char)*?)    (\1) ([cdsrbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr [ ] * *
                     }
                     die "$__FILE__: Transliteration replacement not terminated";
                 }
                 elsif (/\G (\<) ((?:$qq_angle)*?) (\>) /oxgc) {
                     my @tr = ($tr_variable,$2);
                     while (not /\G \z/oxgc) {
-                        if    (/\G (\s+|\#.*)                               /oxgc) { $e .= $1; }
-                        elsif (/\G (\() ((?:$qq_paren)*?)   (\)) ([cdsbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr < > ( )
-                        elsif (/\G (\{) ((?:$qq_brace)*?)   (\}) ([cdsbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr < > { }
-                        elsif (/\G (\[) ((?:$qq_bracket)*?) (\]) ([cdsbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr < > [ ]
-                        elsif (/\G (\<) ((?:$qq_angle)*?)   (\>) ([cdsbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr < > < >
-                        elsif (/\G (\S) ((?:$qq_char)*?)    (\1) ([cdsbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr < > * *
+                        if    (/\G (\s+|\#.*)                                /oxgc) { $e .= $1; }
+                        elsif (/\G (\() ((?:$qq_paren)*?)   (\)) ([cdsrbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr < > ( )
+                        elsif (/\G (\{) ((?:$qq_brace)*?)   (\}) ([cdsrbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr < > { }
+                        elsif (/\G (\[) ((?:$qq_bracket)*?) (\]) ([cdsrbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr < > [ ]
+                        elsif (/\G (\<) ((?:$qq_angle)*?)   (\>) ([cdsrbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr < > < >
+                        elsif (/\G (\S) ((?:$qq_char)*?)    (\1) ([cdsrbB]*) /oxgc) { return e_tr(@tr,$e,$2,$4); } # tr < > * *
                     }
                     die "$__FILE__: Transliteration replacement not terminated";
                 }
                 #           $1   $2               $3   $4               $5   $6
-                elsif (/\G (\S) ((?:$qq_char)*?) (\1) ((?:$qq_char)*?) (\1) ([cdsbB]*) /oxgc) { # tr * * *
+                elsif (/\G (\S) ((?:$qq_char)*?) (\1) ((?:$qq_char)*?) (\1) ([cdsrbB]*) /oxgc) { # tr * * *
                     my @tr = ($tr_variable,$2);
                     return e_tr(@tr,'',$4,$6);
                 }
@@ -1393,7 +1393,7 @@ sub escape {
 
 # s///
 
-    # about [cegimosxp]* (/cg modifier)
+    # about [cegimosxpr]* (/cg modifier)
     #
     # P.67 Pattern-Matching Operators
     # of ISBN 0-596-00241-6 Perl in a Nutshell, Second Edition.
@@ -1402,7 +1402,7 @@ sub escape {
         my $ope = $1;
 
         #        $1   $2               $3   $4               $5   $6
-        if (/\G (\#) ((?:$qq_char)*?) (\#) ((?:$qq_char)*?) (\#) ([cegimosxp]*) /oxgc) { # s# # #
+        if (/\G (\#) ((?:$qq_char)*?) (\#) ((?:$qq_char)*?) (\#) ([cegimosxpr]*) /oxgc) { # s# # #
             return e_sub($sub_variable,$1,$2,$3,$3,$4,$5,$6);
         }
         else {
@@ -1412,83 +1412,83 @@ sub escape {
                 elsif (/\G (\() ((?:$qq_paren)*?) (\)) /oxgc) {
                     my @s = ($1,$2,$3);
                     while (not /\G \z/oxgc) {
-                        if    (/\G (\s+|\#.*)                                   /oxgc) { $e .= $1; }
+                        if    (/\G (\s+|\#.*)                                    /oxgc) { $e .= $1; }
                         #           $1   $2                  $3   $4
-                        elsif (/\G (\() ((?:$qq_paren)*?)   (\)) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\{) ((?:$qq_brace)*?)   (\}) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\[) ((?:$qq_bracket)*?) (\]) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\<) ((?:$qq_angle)*?)   (\>) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\') ((?:$qq_char)*?)    (\') ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\$) ((?:$qq_char)*?)    (\$) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\:) ((?:$qq_char)*?)    (\:) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\@) ((?:$qq_char)*?)    (\@) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\S) ((?:$qq_char)*?)    (\1) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\() ((?:$qq_paren)*?)   (\)) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\{) ((?:$qq_brace)*?)   (\}) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\[) ((?:$qq_bracket)*?) (\]) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\<) ((?:$qq_angle)*?)   (\>) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\') ((?:$qq_char)*?)    (\') ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\$) ((?:$qq_char)*?)    (\$) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\:) ((?:$qq_char)*?)    (\:) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\@) ((?:$qq_char)*?)    (\@) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\S) ((?:$qq_char)*?)    (\1) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
                     }
                     die "$__FILE__: Substitution replacement not terminated";
                 }
                 elsif (/\G (\{) ((?:$qq_brace)*?) (\}) /oxgc) {
                     my @s = ($1,$2,$3);
                     while (not /\G \z/oxgc) {
-                        if    (/\G (\s+|\#.*)                                   /oxgc) { $e .= $1; }
+                        if    (/\G (\s+|\#.*)                                    /oxgc) { $e .= $1; }
                         #           $1   $2                  $3   $4
-                        elsif (/\G (\() ((?:$qq_paren)*?)   (\)) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\{) ((?:$qq_brace)*?)   (\}) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\[) ((?:$qq_bracket)*?) (\]) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\<) ((?:$qq_angle)*?)   (\>) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\') ((?:$qq_char)*?)    (\') ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\$) ((?:$qq_char)*?)    (\$) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\:) ((?:$qq_char)*?)    (\:) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\@) ((?:$qq_char)*?)    (\@) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\S) ((?:$qq_char)*?)    (\1) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\() ((?:$qq_paren)*?)   (\)) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\{) ((?:$qq_brace)*?)   (\}) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\[) ((?:$qq_bracket)*?) (\]) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\<) ((?:$qq_angle)*?)   (\>) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\') ((?:$qq_char)*?)    (\') ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\$) ((?:$qq_char)*?)    (\$) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\:) ((?:$qq_char)*?)    (\:) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\@) ((?:$qq_char)*?)    (\@) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\S) ((?:$qq_char)*?)    (\1) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
                     }
                     die "$__FILE__: Substitution replacement not terminated";
                 }
                 elsif (/\G (\[) ((?:$qq_bracket)*?) (\]) /oxgc) {
                     my @s = ($1,$2,$3);
                     while (not /\G \z/oxgc) {
-                        if    (/\G (\s+|\#.*)                                   /oxgc) { $e .= $1; }
+                        if    (/\G (\s+|\#.*)                                    /oxgc) { $e .= $1; }
                         #           $1   $2                  $3   $4
-                        elsif (/\G (\() ((?:$qq_paren)*?)   (\)) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\{) ((?:$qq_brace)*?)   (\}) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\[) ((?:$qq_bracket)*?) (\]) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\<) ((?:$qq_angle)*?)   (\>) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\') ((?:$qq_char)*?)    (\') ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\$) ((?:$qq_char)*?)    (\$) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\S) ((?:$qq_char)*?)    (\1) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\() ((?:$qq_paren)*?)   (\)) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\{) ((?:$qq_brace)*?)   (\}) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\[) ((?:$qq_bracket)*?) (\]) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\<) ((?:$qq_angle)*?)   (\>) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\') ((?:$qq_char)*?)    (\') ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\$) ((?:$qq_char)*?)    (\$) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\S) ((?:$qq_char)*?)    (\1) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
                     }
                     die "$__FILE__: Substitution replacement not terminated";
                 }
                 elsif (/\G (\<) ((?:$qq_angle)*?) (\>) /oxgc) {
                     my @s = ($1,$2,$3);
                     while (not /\G \z/oxgc) {
-                        if    (/\G (\s+|\#.*)                                   /oxgc) { $e .= $1; }
+                        if    (/\G (\s+|\#.*)                                    /oxgc) { $e .= $1; }
                         #           $1   $2                  $3   $4
-                        elsif (/\G (\() ((?:$qq_paren)*?)   (\)) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\{) ((?:$qq_brace)*?)   (\}) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\[) ((?:$qq_bracket)*?) (\]) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\<) ((?:$qq_angle)*?)   (\>) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\') ((?:$qq_char)*?)    (\') ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\$) ((?:$qq_char)*?)    (\$) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\:) ((?:$qq_char)*?)    (\:) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\@) ((?:$qq_char)*?)    (\@) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
-                        elsif (/\G (\S) ((?:$qq_char)*?)    (\1) ([cegimosxp]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\() ((?:$qq_paren)*?)   (\)) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\{) ((?:$qq_brace)*?)   (\}) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\[) ((?:$qq_bracket)*?) (\]) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\<) ((?:$qq_angle)*?)   (\>) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\') ((?:$qq_char)*?)    (\') ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\$) ((?:$qq_char)*?)    (\$) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\:) ((?:$qq_char)*?)    (\:) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\@) ((?:$qq_char)*?)    (\@) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
+                        elsif (/\G (\S) ((?:$qq_char)*?)    (\1) ([cegimosxpr]*) /oxgc) { return e_sub($sub_variable,@s,$1,$2,$3,$4); }
                     }
                     die "$__FILE__: Substitution replacement not terminated";
                 }
                 #           $1   $2               $3   $4               $5   $6
-                elsif (/\G (\') ((?:$qq_char)*?) (\') ((?:$qq_char)*?) (\') ([cegimosxp]*) /oxgc) {
+                elsif (/\G (\') ((?:$qq_char)*?) (\') ((?:$qq_char)*?) (\') ([cegimosxpr]*) /oxgc) {
                     return e_sub($sub_variable,$1,$2,$3,$3,$4,$5,$6);
                 }
                 #           $1            $2               $3   $4               $5   $6
-                elsif (/\G ([*\-:?\\^|]) ((?:$qq_char)*?) (\1) ((?:$qq_char)*?) (\1) ([cegimosxp]*) /oxgc) {
+                elsif (/\G ([*\-:?\\^|]) ((?:$qq_char)*?) (\1) ((?:$qq_char)*?) (\1) ([cegimosxpr]*) /oxgc) {
                     return e_sub($sub_variable,'{',$2,'}','{',$4,'}',$6); # s | | | --> s { } { }
                 }
                 #           $1   $2               $3   $4               $5   $6
-                elsif (/\G (\$) ((?:$qq_char)*?) (\1) ((?:$qq_char)*?) (\1) ([cegimosxp]*) /oxgc) {
+                elsif (/\G (\$) ((?:$qq_char)*?) (\1) ((?:$qq_char)*?) (\1) ([cegimosxpr]*) /oxgc) {
                     return e_sub($sub_variable,$1,$2,$3,$3,$4,$5,$6);
                 }
                 #           $1   $2               $3   $4               $5   $6
-                elsif (/\G (\S) ((?:$qq_char)*?) (\1) ((?:$qq_char)*?) (\1) ([cegimosxp]*) /oxgc) {
+                elsif (/\G (\S) ((?:$qq_char)*?) (\1) ((?:$qq_char)*?) (\1) ([cegimosxpr]*) /oxgc) {
                     return e_sub($sub_variable,$1,$2,$3,$3,$4,$5,$6);
                 }
             }
@@ -1513,6 +1513,11 @@ sub escape {
     elsif (/\G \b require \s+ (\w+(?: ::\w+)*)            \s* ; /oxmsgc)                       { return e_require($1);       }
     elsif (/\G \b require                                 \s* ; /oxmsgc)                       { return 'Egbk::require;';   }
     elsif (/\G \b require \b                                    /oxmsgc)                       { return 'Egbk::require';    }
+
+# use strict; --> use strict; no strict qw(refs);
+    elsif (/\G \b use (\s+ strict .*? ;) ([ \t]* [#\n]) /oxmsgc)                               { return "use$1 no strict qw(refs);$2";   }
+    elsif (/\G \b use (\s+ strict .*? ;) ([ \t]* [^#])  /oxmsgc)                               { return "use$1 no strict qw(refs);\n$2"; }
+    elsif (/\G \b use (\s+ strict) \b                   /oxmsgc)                               { return "use$1; no strict qw(refs)";     }
 
 # ignore use module
     elsif (/\G \b use (\s+ (?:$ignore_modules) .*? ;) ([ \t]* [#\n]) /oxmsgc)                  { return "# use$1$2";         }
@@ -2586,7 +2591,7 @@ sub e_tr {
     }
     else {
         if ($variable eq '') {
-            $e_tr = qq{Egbk::tr(\$_,      ' =~ ',          $charclass,$e$charclass2,'$modifier')};
+            $e_tr = qq{Egbk::tr(\$_,' =~ ',$charclass,$e$charclass2,'$modifier')};
         }
         else {
             $e_tr = qq{Egbk::tr($variable,'$bind_operator',$charclass,$e$charclass2,'$modifier')};
@@ -2676,6 +2681,8 @@ sub e_qq {
     my $left_e  = 0;
     my $right_e = 0;
     my @char = $string =~ m{ \G (
+        \\o\{ [0-7]+          \}   |
+        \\x\{ [0-9A-Fa-f]+    \}   |
         \$ \s* \d+                 |
         \$ \s* \{ \s* \d+ \s* \}   |
         \$ \$ (?![\w\{])           |
@@ -2693,6 +2700,16 @@ sub e_qq {
         # "\U\l" --> "\l\U"
         elsif (($char[$i] eq '\U') and ($char[$i+1] eq '\l')) {
             @char[$i,$i+1] = @char[$i+1,$i];
+        }
+
+        # octal escape sequence
+        elsif ($char[$i] =~ m/\A \\o \{ ([0-7]+) \} \z/oxms) {
+            $char[$i] = _octchr($1);
+        }
+
+        # hexadecimal escape sequence
+        elsif ($char[$i] =~ m/\A \\x \{ ([0-9A-Fa-f]+) \} \z/oxms) {
+            $char[$i] = _hexchr($1);
         }
 
         if (0) {
@@ -2869,6 +2886,8 @@ sub e_heredoc {
     my $left_e  = 0;
     my $right_e = 0;
     my @char = $string =~ m{ \G (
+        \\o\{ [0-7]+          \}   |
+        \\x\{ [0-9A-Fa-f]+    \}   |
         \$ \s* \d+                 |
         \$ \s* \{ \s* \d+ \s* \}   |
         \$ \$ (?![\w\{])           |
@@ -2886,6 +2905,16 @@ sub e_heredoc {
         # "\U\l" --> "\l\U"
         elsif (($char[$i] eq '\U') and ($char[$i+1] eq '\l')) {
             @char[$i,$i+1] = @char[$i+1,$i];
+        }
+
+        # octal escape sequence
+        elsif ($char[$i] =~ m/\A \\o \{ ([0-7]+) \} \z/oxms) {
+            $char[$i] = _octchr($1);
+        }
+
+        # hexadecimal escape sequence
+        elsif ($char[$i] =~ m/\A \\x \{ ([0-9A-Fa-f]+) \} \z/oxms) {
+            $char[$i] = _hexchr($1);
         }
 
         if (0) {
@@ -3009,9 +3038,11 @@ sub e_qr {
 
     # split regexp
     my @char = $string =~ m{\G(
-        \\  [0-7]{2,3}             |
-        \\x [0-9A-Fa-f]{1,2}       |
-        \\c [\x40-\x5F]            |
+        \\o\{ [0-7]+           \}  |
+        \\    [0-7]{2,3}           |
+        \\x\{ [0-9A-Fa-f]+     \}  |
+        \\x   [0-9A-Fa-f]{1,2}     |
+        \\c   [\x40-\x5F]          |
         \\  (?:$q_char)            |
         [\$\@] $qq_variable        |
         \$ \s* \d+                 |
@@ -3067,6 +3098,16 @@ sub e_qr {
         # "\U\l" --> "\l\U"
         elsif (($char[$i] eq '\U') and ($char[$i+1] eq '\l')) {
             @char[$i,$i+1] = @char[$i+1,$i];
+        }
+
+        # octal escape sequence
+        elsif ($char[$i] =~ m/\A \\o \{ ([0-7]+) \} \z/oxms) {
+            $char[$i] = _octchr($1);
+        }
+
+        # hexadecimal escape sequence
+        elsif ($char[$i] =~ m/\A \\x \{ ([0-9A-Fa-f]+) \} \z/oxms) {
+            $char[$i] = _hexchr($1);
         }
 
         if (0) {
@@ -3150,7 +3191,7 @@ sub e_qr {
         }
 
         # /i modifier
-        elsif ($ignorecase and (Egbk::uc($char[$i]) ne Egbk::lc($char[$i]))) {
+        elsif ($ignorecase and ($char[$i] =~ m/\A [\x00-\xFF] \z/oxms) and (Egbk::uc($char[$i]) ne Egbk::lc($char[$i]))) {
             $char[$i] = '[' . Egbk::uc($char[$i]) . Egbk::lc($char[$i]) . ']';
         }
 
@@ -3382,7 +3423,7 @@ sub e_qr_q {
         }
 
         # /i modifier
-        elsif ($ignorecase and (Egbk::uc($char[$i]) ne Egbk::lc($char[$i]))) {
+        elsif ($ignorecase and ($char[$i] =~ m/\A [\x00-\xFF] \z/oxms) and (Egbk::uc($char[$i]) ne Egbk::lc($char[$i]))) {
             $char[$i] = '[' . Egbk::uc($char[$i]) . Egbk::lc($char[$i]) . ']';
         }
 
@@ -3420,10 +3461,12 @@ sub e_s1 {
         \\g \s* \{ \s* - \s* [1-9][0-9]* \s* \} |
         \\g \s* \{ \s*       [1-9][0-9]* \s* \} |
         \\g \s*              [1-9][0-9]*        |
+        \\o\{                [0-7]+          \} |
         \\                   [1-9][0-9]*        |
-        \\  [0-7]{2,3}                          |
-        \\x [0-9A-Fa-f]{1,2}                    |
-        \\c [\x40-\x5F]                         |
+        \\                   [0-7]{2,3}         |
+        \\x\{                [0-9A-Fa-f]+    \} |
+        \\x                  [0-9A-Fa-f]{1,2}   |
+        \\c                  [\x40-\x5F]        |
         \\  (?:$q_char)                         |
         [\$\@] $qq_variable                     |
         \$ \s* \d+                              |
@@ -3482,6 +3525,16 @@ sub e_s1 {
         # "\U\l" --> "\l\U"
         elsif (($char[$i] eq '\U') and ($char[$i+1] eq '\l')) {
             @char[$i,$i+1] = @char[$i+1,$i];
+        }
+
+        # octal escape sequence
+        elsif ($char[$i] =~ m/\A \\o \{ ([0-7]+) \} \z/oxms) {
+            $char[$i] = _octchr($1);
+        }
+
+        # hexadecimal escape sequence
+        elsif ($char[$i] =~ m/\A \\x \{ ([0-9A-Fa-f]+) \} \z/oxms) {
+            $char[$i] = _hexchr($1);
         }
 
         if (0) {
@@ -3555,7 +3608,7 @@ sub e_s1 {
         }
 
         # /i modifier
-        elsif ($ignorecase and (Egbk::uc($char[$i]) ne Egbk::lc($char[$i]))) {
+        elsif ($ignorecase and ($char[$i] =~ m/\A [\x00-\xFF] \z/oxms) and (Egbk::uc($char[$i]) ne Egbk::lc($char[$i]))) {
             $char[$i] = '[' . Egbk::uc($char[$i]) . Egbk::lc($char[$i]) . ']';
         }
 
@@ -3824,7 +3877,7 @@ sub e_s1_q {
         }
 
         # /i modifier
-        elsif ($ignorecase and (Egbk::uc($char[$i]) ne Egbk::lc($char[$i]))) {
+        elsif ($ignorecase and ($char[$i] =~ m/\A [\x00-\xFF] \z/oxms) and (Egbk::uc($char[$i]) ne Egbk::lc($char[$i]))) {
             $char[$i] = '[' . Egbk::uc($char[$i]) . Egbk::lc($char[$i]) . ']';
         }
 
@@ -3900,6 +3953,7 @@ sub e_sub {
     # of ISBN 0-596-00272-6 Mastering Regular Expressions, Second edition 
 
     my $e_modifier = $modifier =~ tr/e//d;
+    my $r_modifier = $modifier =~ tr/r//d;
 
     my $my = '';
     if ($variable =~ s/\A \( \s* ( (?: local \b | my \b | our \b | state \b )? .+ ) \) \z/$1/oxms) {
@@ -3912,39 +3966,45 @@ sub e_sub {
     $variable_basename =~ s/ \s+ \z//oxms;
 
     # quote replacement string
-    my $q_replacement = '';
-    if ($delimiter2 eq "'") {
-        $q_replacement = e_s2_q('qq', '/',         '/',             $replacement);
-    }
-    else {
-        $q_replacement = e_qq  ('qq', $delimiter2, $end_delimiter2, $replacement);
-    }
-
-    # escape replacement string
     my $e_replacement = '';
-    if ($q_replacement !~ m/'/oxms) {
-        $e_replacement = e_q('',  "'", "'", $q_replacement); # --> q' '
-    }
-    elsif ($q_replacement !~ m{/}oxms) {
-        $e_replacement = e_q('q',  '/', '/', $q_replacement); # --> q/ /
-    }
-    elsif ($q_replacement !~ m/\#/oxms) {
-        $e_replacement = e_q('q',  '#', '#', $q_replacement); # --> q# #
-    }
-    elsif ($q_replacement !~ m/[\<\>]/oxms) {
-        $e_replacement = e_q('q', '<', '>', $q_replacement); # --> q< >
-    }
-    elsif ($q_replacement !~ m/[\(\)]/oxms) {
-        $e_replacement = e_q('q', '(', ')', $q_replacement); # --> q( )
-    }
-    elsif ($q_replacement !~ m/[\{\}]/oxms) {
-        $e_replacement = e_q('q', '{', '}', $q_replacement); # --> q{ }
+    if ($e_modifier >= 1) {
+        $e_replacement = e_qq('', '', '', $replacement);
+        $e_modifier--;
     }
     else {
-        for my $char (qw( ! " $ % & * + . : = ? @ ^ ` | ~ ), "\x00".."\x1F", "\x7F", "\xFF") {
-            if ($q_replacement !~ m/\Q$char\E/xms) {
-                $e_replacement = e_q('q', $char, $char, $q_replacement);
-                last;
+        my $q_replacement = '';
+        if ($delimiter2 eq "'") {
+            $q_replacement = e_s2_q('qq', '/',         '/',             $replacement);
+        }
+        else {
+            $q_replacement = e_qq  ('qq', $delimiter2, $end_delimiter2, $replacement);
+        }
+
+        # escape replacement string
+        if ($q_replacement !~ m/'/oxms) {
+            $e_replacement = e_q('eval ',  "'", "'", $q_replacement); # --> q' '
+        }
+        elsif ($q_replacement !~ m{/}oxms) {
+            $e_replacement = e_q('eval q', '/', '/', $q_replacement); # --> q/ /
+        }
+        elsif ($q_replacement !~ m/\#/oxms) {
+            $e_replacement = e_q('eval q', '#', '#', $q_replacement); # --> q# #
+        }
+        elsif ($q_replacement !~ m/[\<\>]/oxms) {
+            $e_replacement = e_q('eval q', '<', '>', $q_replacement); # --> q< >
+        }
+        elsif ($q_replacement !~ m/[\(\)]/oxms) {
+            $e_replacement = e_q('eval q', '(', ')', $q_replacement); # --> q( )
+        }
+        elsif ($q_replacement !~ m/[\{\}]/oxms) {
+            $e_replacement = e_q('eval q', '{', '}', $q_replacement); # --> q{ }
+        }
+        else {
+            for my $char (qw( ! " $ % & * + . : = ? @ ^ ` | ~ ), "\x00".."\x1F", "\x7F", "\xFF") {
+                if ($q_replacement !~ m/\Q$char\E/xms) {
+                    $e_replacement = e_q('eval q', $char, $char, $q_replacement);
+                    last;
+                }
             }
         }
     }
@@ -3958,91 +4018,190 @@ sub e_sub {
     }
 
     my $sub = '';
-    if (0) {
+
+    # with /r
+    if ($r_modifier) {
+        if (0) {
+        }
+
+        # s///gr with multibyte anchoring
+        elsif ($modifier =~ m/g/oxms) {
+            $sub = sprintf(
+                #      1  2    3   4  5              6   7 8                 9  10   11  1213    14      15           16            17      18     19          20         21               22
+                q<eval{%s %s_t=%s; %s %s_a=''; while(%s_t%s%s){ local $^W=0; %s %s_r=%s; %s%s_t="%s_a${1}%s_r$'"; pos(%s_t)=length "%s_a${1}%s_r"; %s_a=substr(%s_t,0,pos(%s_t)); } return %s_t}>,
+
+                $local,                                                                       #  1
+                    $variable_basename,                                                       #  2
+                $variable,                                                                    #  3
+                $local,                                                                       #  4
+                    $variable_basename,                                                       #  5
+                    $variable_basename,                                                       #  6
+                $bind_operator,                                                               #  7
+                ($delimiter1 eq "'") ?                                                        #  8
+                e_s1_q('m', $delimiter1, $end_delimiter1, $pattern, $modifier) :              #  :
+                e_s1  ('m', $delimiter1, $end_delimiter1, $pattern, $modifier),               #  :
+                $local,                                                                       #  9
+                    $variable_basename,                                                       # 10
+                $e_replacement,                                                               # 11
+                sprintf('%s_r=eval %s_r; ', $variable_basename, $variable_basename) x $e_modifier, # 12
+                    $variable_basename,                                                       # 13
+                    $variable_basename,                                                       # 14
+                    $variable_basename,                                                       # 15
+                    $variable_basename,                                                       # 16
+                    $variable_basename,                                                       # 17
+                    $variable_basename,                                                       # 18
+                    $variable_basename,                                                       # 19
+                    $variable_basename,                                                       # 20
+                    $variable_basename,                                                       # 21
+                    $variable_basename,                                                       # 22
+            );
+        }
+
+        # s///gr without multibyte anchoring
+        elsif ($modifier =~ m/g/oxms) {
+            $sub = sprintf(
+                #      1  2    3         4   5 6                 7  8    9   1011      12           13              14              15
+                q<eval{%s %s_t=%s; while(%s_t%s%s){ local $^W=0; %s %s_r=%s; %s%s_t="$`%s_r$'"; pos(%s_t)=length "$`%s_r"; } return %s_t}>,
+
+                $local,                                                                       #  1
+                    $variable_basename,                                                       #  2
+                $variable,                                                                    #  3
+                    $variable_basename,                                                       #  4
+                $bind_operator,                                                               #  5
+                ($delimiter1 eq "'") ?                                                        #  6
+                e_s1_q('m', $delimiter1, $end_delimiter1, $pattern, $modifier) :              #  :
+                e_s1  ('m', $delimiter1, $end_delimiter1, $pattern, $modifier),               #  :
+                $local,                                                                       #  7
+                    $variable_basename,                                                       #  8
+                $e_replacement,                                                               #  9
+                sprintf('%s_r=eval %s_r; ', $variable_basename, $variable_basename) x $e_modifier, # 10
+                    $variable_basename,                                                       # 11
+                    $variable_basename,                                                       # 12
+                    $variable_basename,                                                       # 13
+                    $variable_basename,                                                       # 14
+                    $variable_basename,                                                       # 15
+            );
+        }
+
+        # s///r
+        else {
+
+            my $prematch = q{$`};
+            $prematch = q{${1}};
+
+            $sub = sprintf(
+                #  1 2 3                        4  5    6   7  8 9           10
+                q<(%s%s%s) ? eval{ local $^W=0; %s %s_r=%s; %s"%s%s_r$'" } : %s>,
+
+                $variable,                                                                    #  1
+                $bind_operator,                                                               #  2
+                ($delimiter1 eq "'") ?                                                        #  3
+                e_s1_q('m', $delimiter1, $end_delimiter1, $pattern, $modifier) :              #  :
+                e_s1  ('m', $delimiter1, $end_delimiter1, $pattern, $modifier),               #  :
+                $local,                                                                       #  4
+                    $variable_basename,                                                       #  5
+                $e_replacement,                                                               #  6
+                sprintf('%s_r=eval %s_r; ', $variable_basename, $variable_basename) x $e_modifier, #  7
+                $prematch,                                                                    #  8
+                    $variable_basename,                                                       #  9
+                $variable,                                                                    # 10
+            );
+        }
+
+        # $var !~ s///r doesn't make sense
+        if ($bind_operator =~ m/ !~ /oxms) {
+            $sub = q{die("$0: Using !~ with s///r doesn't make sense"), } . $sub;
+        }
     }
 
-    # s///g with multibyte anchoring
-    elsif ($modifier =~ m/g/oxms) {
-        $sub = sprintf(
-            #      1  2       3  4              5 6 7                                     8  9         10  1112  13      14           15          16      17     18          19       20    21             22
-            q<eval{%s %s_n=0; %s %s_a=''; while(%s%s%s){ no strict qw(refs); local $^W=0; %s %s_r=eval %s; %s%s="%s_a${1}%s_r$'"; pos(%s)=length "%s_a${1}%s_r"; %s_a=substr(%s,0,pos(%s)); %s_n++} return %s_n}>,
-
-            $local,                                                                       #  1
-                $variable_basename,                                                       #  2
-            $local,                                                                       #  3
-                $variable_basename,                                                       #  4
-            $variable,                                                                    #  5
-            $bind_operator,                                                               #  6
-            ($delimiter1 eq "'") ?                                                        #  7
-            e_s1_q('m', $delimiter1, $end_delimiter1, $pattern, $modifier) :              #  :
-            e_s1  ('m', $delimiter1, $end_delimiter1, $pattern, $modifier),               #  :
-            $local,                                                                       #  8
-                $variable_basename,                                                       #  9
-            $e_replacement,                                                               # 10
-            sprintf('%s_r=eval %s_r; ', $variable_basename, $variable_basename) x $e_modifier, # 11
-            $variable,                                                                    # 12
-                $variable_basename,                                                       # 13
-                $variable_basename,                                                       # 14
-            $variable,                                                                    # 15
-                $variable_basename,                                                       # 16
-                $variable_basename,                                                       # 17
-                $variable_basename,                                                       # 18
-            $variable,                                                                    # 19
-            $variable,                                                                    # 20
-                $variable_basename,                                                       # 21
-                $variable_basename,                                                       # 22
-        );
-    }
-
-    # s///g without multibyte anchoring
-    elsif ($modifier =~ m/g/oxms) {
-        $sub = sprintf(
-            #      1  2             3 4 5                                     6  7         8   9 10    11           12            13     14             15
-            q<eval{%s %s_n=0; while(%s%s%s){ no strict qw(refs); local $^W=0; %s %s_r=eval %s; %s%s="$`%s_r$'"; pos(%s)=length "$`%s_r"; %s_n++} return %s_n}>,
-
-            $local,                                                                       #  1
-                $variable_basename,                                                       #  2
-            $variable,                                                                    #  3
-            $bind_operator,                                                               #  4
-            ($delimiter1 eq "'") ?                                                        #  5
-            e_s1_q('m', $delimiter1, $end_delimiter1, $pattern, $modifier) :              #  :
-            e_s1  ('m', $delimiter1, $end_delimiter1, $pattern, $modifier),               #  :
-            $local,                                                                       #  6
-                $variable_basename,                                                       #  7
-            $e_replacement,                                                               #  8
-            sprintf('%s_r=eval %s_r; ', $variable_basename, $variable_basename) x $e_modifier, #  9
-            $variable,                                                                    # 10
-                $variable_basename,                                                       # 11
-            $variable,                                                                    # 12
-                $variable_basename,                                                       # 13
-                $variable_basename,                                                       # 14
-                $variable_basename,                                                       # 15
-        );
-    }
-
-    # s///
+    # without /r
     else {
+        if (0) {
+        }
 
-        my $prematch = q{$`};
-        $prematch = q{${1}};
+        # s///g with multibyte anchoring
+        elsif ($modifier =~ m/g/oxms) {
+            $sub = sprintf(
+                #      1  2       3  4              5 6 7                 8  9    10  1112  13      14           15          16      17     18          19       20    21             22
+                q<eval{%s %s_n=0; %s %s_a=''; while(%s%s%s){ local $^W=0; %s %s_r=%s; %s%s="%s_a${1}%s_r$'"; pos(%s)=length "%s_a${1}%s_r"; %s_a=substr(%s,0,pos(%s)); %s_n++} return %s_n}>,
 
-        $sub = sprintf(
-            #  1 2 3                                            4  5         6   7 8   9 10
-            q<(%s%s%s) ? eval{ no strict qw(refs); local $^W=0; %s %s_r=eval %s; %s%s="%s%s_r$'"; 1 } : undef>,
+                $local,                                                                       #  1
+                    $variable_basename,                                                       #  2
+                $local,                                                                       #  3
+                    $variable_basename,                                                       #  4
+                $variable,                                                                    #  5
+                $bind_operator,                                                               #  6
+                ($delimiter1 eq "'") ?                                                        #  7
+                e_s1_q('m', $delimiter1, $end_delimiter1, $pattern, $modifier) :              #  :
+                e_s1  ('m', $delimiter1, $end_delimiter1, $pattern, $modifier),               #  :
+                $local,                                                                       #  8
+                    $variable_basename,                                                       #  9
+                $e_replacement,                                                               # 10
+                sprintf('%s_r=eval %s_r; ', $variable_basename, $variable_basename) x $e_modifier, # 11
+                $variable,                                                                    # 12
+                    $variable_basename,                                                       # 13
+                    $variable_basename,                                                       # 14
+                $variable,                                                                    # 15
+                    $variable_basename,                                                       # 16
+                    $variable_basename,                                                       # 17
+                    $variable_basename,                                                       # 18
+                $variable,                                                                    # 19
+                $variable,                                                                    # 20
+                    $variable_basename,                                                       # 21
+                    $variable_basename,                                                       # 22
+            );
+        }
 
-            $variable,                                                                    #  1
-            $bind_operator,                                                               #  2
-            ($delimiter1 eq "'") ?                                                        #  3
-            e_s1_q('m', $delimiter1, $end_delimiter1, $pattern, $modifier) :              #  :
-            e_s1  ('m', $delimiter1, $end_delimiter1, $pattern, $modifier),               #  :
-            $local,                                                                       #  4
-                $variable_basename,                                                       #  5
-            $e_replacement,                                                               #  6
-            sprintf('%s_r=eval %s_r; ', $variable_basename, $variable_basename) x $e_modifier, #  7
-            $variable,                                                                    #  8
-            $prematch,                                                                    #  9
-                $variable_basename,                                                       # 10
-        );
+        # s///g without multibyte anchoring
+        elsif ($modifier =~ m/g/oxms) {
+            $sub = sprintf(
+                #      1  2             3 4 5                 6  7    8   9 10    11           12            13     14             15
+                q<eval{%s %s_n=0; while(%s%s%s){ local $^W=0; %s %s_r=%s; %s%s="$`%s_r$'"; pos(%s)=length "$`%s_r"; %s_n++} return %s_n}>,
+
+                $local,                                                                       #  1
+                    $variable_basename,                                                       #  2
+                $variable,                                                                    #  3
+                $bind_operator,                                                               #  4
+                ($delimiter1 eq "'") ?                                                        #  5
+                e_s1_q('m', $delimiter1, $end_delimiter1, $pattern, $modifier) :              #  :
+                e_s1  ('m', $delimiter1, $end_delimiter1, $pattern, $modifier),               #  :
+                $local,                                                                       #  6
+                    $variable_basename,                                                       #  7
+                $e_replacement,                                                               #  8
+                sprintf('%s_r=eval %s_r; ', $variable_basename, $variable_basename) x $e_modifier, #  9
+                $variable,                                                                    # 10
+                    $variable_basename,                                                       # 11
+                $variable,                                                                    # 12
+                    $variable_basename,                                                       # 13
+                    $variable_basename,                                                       # 14
+                    $variable_basename,                                                       # 15
+            );
+        }
+
+        # s///
+        else {
+
+            my $prematch = q{$`};
+            $prematch = q{${1}};
+
+            $sub = sprintf(
+                #  1 2 3                        4  5    6   7 8   9 10
+                q<(%s%s%s) ? eval{ local $^W=0; %s %s_r=%s; %s%s="%s%s_r$'"; 1 } : undef>,
+
+                $variable,                                                                    #  1
+                $bind_operator,                                                               #  2
+                ($delimiter1 eq "'") ?                                                        #  3
+                e_s1_q('m', $delimiter1, $end_delimiter1, $pattern, $modifier) :              #  :
+                e_s1  ('m', $delimiter1, $end_delimiter1, $pattern, $modifier),               #  :
+                $local,                                                                       #  4
+                    $variable_basename,                                                       #  5
+                $e_replacement,                                                               #  6
+                sprintf('%s_r=eval %s_r; ', $variable_basename, $variable_basename) x $e_modifier, #  7
+                $variable,                                                                    #  8
+                $prematch,                                                                    #  9
+                    $variable_basename,                                                       # 10
+            );
+        }
     }
 
     # (my $foo = $bar) =~ s///   -->   (my $foo = $bar, eval { ... })[1]
@@ -4116,9 +4275,11 @@ sub e_split {
 
     # split regexp
     my @char = $string =~ m{\G(
-        \\  [0-7]{2,3}             |
-        \\x [0-9A-Fa-f]{1,2}       |
-        \\c [\x40-\x5F]            |
+        \\o\{ [0-7]+           \}  |
+        \\    [0-7]{2,3}           |
+        \\x\{ [0-9A-Fa-f]+     \}  |
+        \\x   [0-9A-Fa-f]{1,2}     |
+        \\c   [\x40-\x5F]          |
         \\  (?:$q_char)            |
         [\$\@] $qq_variable        |
         \$ \s* \d+                 |
@@ -4144,6 +4305,16 @@ sub e_split {
         # "\U\l" --> "\l\U"
         elsif (($char[$i] eq '\U') and ($char[$i+1] eq '\l')) {
             @char[$i,$i+1] = @char[$i+1,$i];
+        }
+
+        # octal escape sequence
+        elsif ($char[$i] =~ m/\A \\o \{ ([0-7]+) \} \z/oxms) {
+            $char[$i] = _octchr($1);
+        }
+
+        # hexadecimal escape sequence
+        elsif ($char[$i] =~ m/\A \\x \{ ([0-9A-Fa-f]+) \} \z/oxms) {
+            $char[$i] = _hexchr($1);
         }
 
         if (0) {
@@ -4229,7 +4400,7 @@ sub e_split {
         }
 
         # /i modifier
-        elsif ($ignorecase and (Egbk::uc($char[$i]) ne Egbk::lc($char[$i]))) {
+        elsif ($ignorecase and ($char[$i] =~ m/\A [\x00-\xFF] \z/oxms) and (Egbk::uc($char[$i]) ne Egbk::lc($char[$i]))) {
             $char[$i] = '[' . Egbk::uc($char[$i]) . Egbk::lc($char[$i]) . ']';
         }
 
@@ -4460,7 +4631,7 @@ sub e_split_q {
         }
 
         # /i modifier
-        elsif ($ignorecase and (Egbk::uc($char[$i]) ne Egbk::lc($char[$i]))) {
+        elsif ($ignorecase and ($char[$i] =~ m/\A [\x00-\xFF] \z/oxms) and (Egbk::uc($char[$i]) ne Egbk::lc($char[$i]))) {
             $char[$i] = '[' . Egbk::uc($char[$i]) . Egbk::lc($char[$i]) . ']';
         }
 
@@ -4688,6 +4859,52 @@ sub _realfilename {
     }
 }
 
+sub _octchr {
+    my($octdigit) = @_;
+
+    my @binary = ();
+    for my $octal (split(//,$octdigit)) {
+        push @binary, {
+            '0' => '000',
+            '1' => '001',
+            '2' => '010',
+            '3' => '011',
+            '4' => '100',
+            '5' => '101',
+            '6' => '110',
+            '7' => '111',
+        }->{$octal};
+    }
+    my $binary = join '', @binary;
+
+    my $octchr = {
+        #                1234567
+        1 => pack('B*', "0000000$binary"),
+        2 => pack('B*', "000000$binary"),
+        3 => pack('B*', "00000$binary"),
+        4 => pack('B*', "0000$binary"),
+        5 => pack('B*', "000$binary"),
+        6 => pack('B*', "00$binary"),
+        7 => pack('B*', "0$binary"),
+        0 => pack('B*', "$binary"),
+
+    }->{CORE::length($binary) % 8};
+
+    return $octchr;
+}
+
+sub _hexchr {
+    my($hexdigit) = @_;
+
+    my $hexchr = {
+        1 => pack('H*', "0$hexdigit"),
+        0 => pack('H*', "$hexdigit"),
+
+    }->{CORE::length($_[0]) % 2};
+
+    return $hexchr;
+}
+
 1;
 
 __END__
@@ -4711,6 +4928,10 @@ GBK - Source code filter to escape GBK
 
   $ perl GBK.pm GBK_script.pl > Escaped_script.pl.e
 
+  then
+
+  $ perl Escaped_script.pl.e
+
   GBK_script.pl  --- script written in GBK
   Escaped_script.pl.e --- escaped script
 
@@ -4722,7 +4943,9 @@ GBK - Source code filter to escape GBK
     GBK::index(...);
     GBK::rindex(...);
 
-  emulate Perl5.6 on perl5.005
+  emulate Perl5.6 on perl5.00503
+    use warnings;
+    use warnings::register;
     binmode(...);
     open(...);
 
@@ -4747,15 +4970,13 @@ You could apply chop() and regexps even to complex CJK characters.
 
 JPerl in CPAN Perl Ports (Binary Distributions)
 
-http://www.cpan.org/ports/index.html#jperl
-
-said,
+said before,
 
   As of Perl 5.8.0 it is suggested that instead of JPerl (which is
   based on a quite old release of Perl) you should just use Perl 5.8.0,
   since it can do all that JPerl did, and more.
 
-But is it really so?
+But was it really so?
 
 In this country, GBK is widely used on mainframe I/O, the personal computer,
 and the cellular phone. This software treats GBK directly. Therefor there is
@@ -4811,7 +5032,24 @@ What's this software good for ...
 
 Let's make yet another future by JPerl's future.
 
-=head1 BASIC IDEA
+=head1 JRE: JPerl Runtime Environment
+
+  +---------------------------------------+
+  |        JPerl Application Script       | Your Script
+  +---------------------------------------+
+  |  Source Code Filter, Runtime Routine  | ex. GBK.pm, Egbk.pm
+  +---------------------------------------+
+  |          PVM 5.00503 or later         | ex. perl 5.00503
+  +---------------------------------------+
+
+A Perl Virtual Machine (PVM) enables a set of computer software programs and
+data structures to use a virtual machine model for the execution of other
+computer programs and scripts. The model used by a PVM accepts a form of
+computer intermediate language commonly referred to as Perl byteorientedcode.
+This language conceptually represents the instruction set of a byte-oriented,
+capability architecture.
+
+=head1 Basic Idea Of Source Code Filter
 
 I discovered this mail again recently.
 
@@ -4839,7 +5077,7 @@ save as: SJIS.pm
 
 I am glad that I could confirm my idea is not so wrong.
 
-=head1 SOFTWARE COMPOSITION
+=head1 Software Composition
 
    GBK.pm               --- source code filter to escape GBK
    Egbk.pm              --- run-time routines for GBK.pm
@@ -5046,6 +5284,13 @@ Insert 'Egbk::' instead of '-' of operator.
   -C          Egbk::C
   ---------------------------------
 
+As of Perl 5.00503, as a form of purely syntactic sugar, you can stack file
+test operators, in a way that -w -x $file is equivalent to -x $file && -w _ .
+
+  if ( -w -r $file ) {
+      print "The file is both readable and writable!\n";
+  }
+
 =head1 Escaping Built-in Standard Module (Egbk.pm provides)
 
 Egbk.pm does "BEGIN { unshift @INC, '/Perl/site/lib/GBK' }" at head.
@@ -5075,18 +5320,18 @@ oriented function. See 'CHARACTER ORIENTED FUNCTIONS'.
   rindex      GBK::rindex
   ---------------------------------
 
-=head1 CHARACTER ORIENTED FUNCTIONS
+=head1 Character Oriented Functions
 
 =over 2
 
-=item * Order of Character
+=item * Order Of Character
 
   $ord = GBK::ord($string);
 
   This function returns the numeric value (ASCII or GBK) of the first character
   of $string. The return value is always unsigned.
 
-=item * Reverse list or string
+=item * Reverse List Or String
 
   @reverse = GBK::reverse(@list);
   $reverse = GBK::reverse(@list);
@@ -5105,7 +5350,7 @@ oriented function. See 'CHARACTER ORIENTED FUNCTIONS'.
   In scalar context, the function concatenates all the elements of LIST and then
   returns the reverse of that resulting string, character by character.
 
-=item * length by GBK character
+=item * Length By GBK Character
 
   $length = GBK::length($string);
   $length = GBK::length();
@@ -5117,13 +5362,11 @@ oriented function. See 'CHARACTER ORIENTED FUNCTIONS'.
   for the size of an array, and scalar keys %hash for the number of key/value pairs
   in a hash. (The scalar is typically omitted when redundant.)
 
-  To find the length of a string in bytes rather than characters, say:
+  To find the length of a string in bytes rather than characters, say simply:
 
-  $blen = length($string);
-  $blen = CORE::length($string);
-  $blen = bytes::length($string);
+  $bytes = length($string);
 
-=item * substr by GBK character
+=item * Substr By GBK Character
 
   $substr = GBK::substr($string,$offset,$length,$replacement);
   $substr = GBK::substr($string,$offset,$length);
@@ -5164,7 +5407,7 @@ oriented function. See 'CHARACTER ORIENTED FUNCTIONS'.
 
   GBK::substr($var, -1, 1, "Curly");
 
-=item * index by GBK character
+=item * Index By GBK Character
 
   $index = GBK::index($string,$substring,$offset);
   $index = GBK::index($string,$substring);
@@ -5181,7 +5424,7 @@ oriented function. See 'CHARACTER ORIENTED FUNCTIONS'.
       $pos++;
   }
 
-=item * rindex by GBK character
+=item * Rindex By GBK Character
 
   $rindex = GBK::rindex($string,$substring,$position);
   $rindex = GBK::rindex($string,$substring);
@@ -5199,7 +5442,12 @@ oriented function. See 'CHARACTER ORIENTED FUNCTIONS'.
 
 =back
 
-=head1 Perl5.6 Emulation on perl5.005
+=head1 Perl5.6 Emulation On perl5.005
+
+  Using warnings pragma on perl5.00503 by rename files.
+
+  warnings.pm_ --> warnings.pm
+  warnings/register.pm_ --> warnings/register.pm
 
   To be compatible with Perl5.6 on perl5.005, script is converted as follows.
 
@@ -5221,8 +5469,8 @@ oriented function. See 'CHARACTER ORIENTED FUNCTIONS'.
 
   * two arguments
 
-  If you are using perl5.005, GBK software emulate perl5.6's binmode function.
-  Only the point is here. See also perlfunc/binmode for details.
+  If you are using perl5.005 other than MacPerl, GBK software emulate perl5.6's
+  binmode function. Only the point is here. See also perlfunc/binmode for details.
 
   This function arranges for the FILEHANDLE to have the semantics specified by the
   $disciplines argument. If $disciplines is omitted, ':raw' semantics are applied
@@ -5282,7 +5530,7 @@ oriented function. See 'CHARACTER ORIENTED FUNCTIONS'.
   the file named in $expr for writing, creating the file if it doesn't exist and
   truncating the file down to nothing if it already exists:
 
-  open(LOG, ">", "logfile")  or die "Can't create logfile: $!";
+  open(LOG, ">", "logfile") or die "Can't create logfile: $!";
 
   With the one- or two-argument form of open, you have to be careful when you use
   a string variable as a filename, since the variable may contain arbitrarily
@@ -5316,6 +5564,7 @@ oriented function. See 'CHARACTER ORIENTED FUNCTIONS'.
   -------------------------------------------------
   :raw            Binary mode; do no processing
   :crlf           Text mode; Intuit newlines
+                  (DOS-like system only)
   :encoding(...)  Legacy encoding
   -------------------------------------------------
 
@@ -5326,85 +5575,110 @@ oriented function. See 'CHARACTER ORIENTED FUNCTIONS'.
 
 =back
 
-=head1 Ignore utf8 pragma
+=head1 Ignore Pragmas And Modules
+
+  -----------------------------------------------------------
+  Before                    After
+  -----------------------------------------------------------
+  use strict;               use strict; no strict qw(refs);
+  require utf8;             # require utf8;
+  require bytes;            # require bytes;
+  require I18N::Japanese;   # require I18N::Japanese;
+  require I18N::Collate;    # require I18N::Collate;
+  require I18N::JExt;       # require I18N::JExt;
+  require File::DosGlob;    # require File::DosGlob;
+  require Wild;             # require Wild;
+  require Wildcard;         # require Wildcard;
+  require Japanese;         # require Japanese;
+  use utf8;                 # use utf8;
+  use bytes;                # use bytes;
+  use I18N::Japanese;       # use I18N::Japanese;
+  use I18N::Collate;        # use I18N::Collate;
+  use I18N::JExt;           # use I18N::JExt;
+  use File::DosGlob;        # use File::DosGlob;
+  use Wild;                 # use Wild;
+  use Wildcard;             # use Wildcard;
+  use Japanese;             # use Japanese;
+  no utf8;                  # no utf8;
+  no bytes;                 # no bytes;
+  no I18N::Japanese;        # no I18N::Japanese;
+  no I18N::Collate;         # no I18N::Collate;
+  no I18N::JExt;            # no I18N::JExt;
+  no File::DosGlob;         # no File::DosGlob;
+  no Wild;                  # no Wild;
+  no Wildcard;              # no Wildcard;
+  no Japanese;              # no Japanese;
+  -----------------------------------------------------------
 
   Comment out pragma to ignore utf8 environment, and Egbk.pm provides these
   functions.
 
-  ---------------------------------------------------------------------
-  Before          After                  Explanation
-  ---------------------------------------------------------------------
-  use utf8;       # use utf8;            Egbk.pm provides utf8::*
-  no utf8;        # no utf8;             functions even if 'no utf8;'
-  use bytes;      # use bytes;           Egbk.pm provides bytes::*
-  no bytes;       # no bytes;            functions even if 'no bytes;'
-  ---------------------------------------------------------------------
 
 =over 2
 
-=item * dummy utf8::upgrade
+=item * Dummy utf8::upgrade
 
   $num_octets = utf8::upgrade($string);
 
   Returns the number of octets necessary to represent the string.
 
-=item * dummy utf8::downgrade
+=item * Dummy utf8::downgrade
 
   $success = utf8::downgrade($string[, FAIL_OK]);
 
   Returns true always.
 
-=item * dummy utf8::encode
+=item * Dummy utf8::encode
 
   utf8::encode($string);
 
   Returns nothing.
 
-=item * dummy utf8::decode
+=item * Dummy utf8::decode
 
   $success = utf8::decode($string);
 
   Returns true always.
 
-=item * dummy utf8::is_utf8
+=item * Dummy utf8::is_utf8
 
   $flag = utf8::is_utf8(STRING);
 
   Returns false always.
 
-=item * dummy utf8::valid
+=item * Dummy utf8::valid
 
   $flag = utf8::valid(STRING);
 
   Returns true always.
 
-=item * dummy bytes::chr
+=item * Dummy bytes::chr
 
   This function is same as chr.
 
-=item * dummy bytes::index
+=item * Dummy bytes::index
 
   This function is same as index.
 
-=item * dummy bytes::length
+=item * Dummy bytes::length
 
   This function is same as length.
 
-=item * dummy bytes::ord
+=item * Dummy bytes::ord
 
   This function is same as ord.
 
-=item * dummy bytes::rindex
+=item * Dummy bytes::rindex
 
   This function is same as rindex.
 
-=item * dummy bytes::substr
+=item * Dummy bytes::substr
 
   This function is same as substr.
 
 =back
 
-=head1 ENVIRONMENT VARIABLE
+=head1 Environment Variable
 
  This software uses the flock function for exclusive control. The execution of the
  program is blocked until it becomes possible to read or write the file.
@@ -5431,13 +5705,16 @@ Function "format" can't handle multiple octet code same as original Perl.
 
 Function chdir() can always be executed with perl5.005.
 
+There are the following limitations for DOS-like system(any of MSWin32, NetWare,
+symbian, dos).
+
 On perl5.006 or perl5.00800, if path is ended by chr(0x5C), it needs jacode.pl
 library.
 
-On perl5.008001 or later, perl5.010 or perl5.012, if path is ended by chr(0x5C),
-it needs Win32 module. Chdir succeeds when a short path name can be acquired
-according to Win32::GetShortPathName(). However, the current directory is a
-short path name.
+On perl5.008001 or later, perl5.010, perl5.012, perl5.014, if path is ended by
+chr(0x5C), it needs Win32 module. Chdir succeeds when a short path name can be
+acquired according to Win32::GetShortPathName(). However, the current directory
+is a short path name.
 
 see also,
 Bug #81839
@@ -5449,7 +5726,7 @@ http://bugs.activestate.com/show_bug.cgi?id=81839
 The look-behind assertion like (?<=[A-Z]) is not prevented from matching trail
 octet of the previous multiple octet code.
 
-=item * GBK::substr as lvalue
+=item * GBK::substr As Lvalue
 
 GBK::substr differs from CORE::substr, and cannot be used as a lvalue.
 To change part of a string, you can use the optional fourth argument which is the
@@ -5457,7 +5734,7 @@ replacement string.
 
 GBK::substr($string, 13, 4, "JPerl");
 
-=item * Special variables $` and $& doesn't function
+=item * Special Variables $` And $& Doesn't Function
 
   Because ...
 
@@ -5490,6 +5767,18 @@ GBK::substr($string, 13, 4, "JPerl");
 
   $1 does function instead of $&.
 
+=item * Limitation Of Regular Expression
+
+This software has limitation from \G in multibyte anchoring. On perl5.006,
+perl5.008, perl5.010, perl5.012, and perl5.014, it doesn't match in the place
+in which it should match at over 32,767 octets. Moreover, at that time, neither
+the error nor warning are displayed.
+
+see also,
+Bug #89792
+\G can't treat over 32,767 octets
+http://bugs.activestate.com/show_bug.cgi?id=89792
+
 =back
 
 =head1 AUTHOR
@@ -5507,7 +5796,7 @@ This software is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-=head1 MY GOAL
+=head1 My Goal
 
 P.401 See chapter 15: Unicode
 of ISBN 0-596-00027-8 Programming Perl Third Edition.
@@ -5651,7 +5940,6 @@ problem by the Perl script.
 =item * Goal #5:
 
 JPerl users will be able to maintain JPerl by Perl.
-Or MacJPerl users will be able to maintain MacJPerl by MacPerl.
 
 May the JPerl be with you, always.
 
@@ -5790,8 +6078,10 @@ following hackers or persons had made.
 I am thankful to all persons.
 
  Rick Yamashita, Shift_JIS
- ttp://furukawablog.spaces.live.com/Blog/cns!1pmWgsL289nm7Shn7cS0jHzA!2225.entry
+ ttp://furukawablog.spaces.live.com/Blog/cns!1pmWgsL289nm7Shn7cS0jHzA!2225.entry (dead link)
+ ttp://shino.tumblr.com/post/116166805/1981-us-jis
  (add 'h' at head)
+ http://www.wdic.org/w/WDIC/%E3%82%B7%E3%83%95%E3%83%88JIS
 
  Larry Wall, Perl
  http://www.perl.org/
@@ -5804,7 +6094,6 @@ I am thankful to all persons.
 
  SADAHIRO Tomoyuki, The right way of using Shift_JIS
  http://homepage1.nifty.com/nomenclator/perl/shiftjis.htm
- http://search.cpan.org/dist/GBK-Regexp/
 
  Yukihiro "Matz" Matsumoto, YAPC::Asia2006 Ruby on Perl(s)
  http://www.rubyist.net/~matz/slides/yapc2006/
@@ -5813,10 +6102,10 @@ I am thankful to all persons.
  http://homepage1.nifty.com/kazuf/jperl.html
 
  Bruce., Unicode in Perl
- http://www.rakunet.org/TSNET/TSabc/18/546.html
+ http://www.rakunet.org/tsnet/TSabc/18/546.html
 
  Hiroaki Izumi, Perl5.8/Perl5.10 is not useful on the Windows.
- http://www.aritia.jp/hizumi/oldtext/perlwin.html
+ http://www.aritia.org/hizumi/perl/perlwin.html
 
  TSUKAMOTO Makio, Perl memo/file path of Windows
  http://digit.que.ne.jp/work/wiki.cgi?Perl%E3%83%A1%E3%83%A2%2FWindows%E3%81%A7%E3%81%AE%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%83%91%E3%82%B9
@@ -5828,6 +6117,7 @@ I am thankful to all persons.
  http://homepage2.nifty.com/kipp/perl/jperl/
 
  WATANABE Hirofumi, Jperl
+ http://www.cpan.org/src/5.0/jperl/
  http://search.cpan.org/~watanabe/
  ftp://ftp.oreilly.co.jp/pcjp98/watanabe/jperlconf.ppt
 

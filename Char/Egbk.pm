@@ -16,7 +16,7 @@ use strict qw(subs vars);
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.72 $ =~ m/(\d+)/xmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.73 $ =~ m/(\d+)/xmsg;
 
 BEGIN {
     my $PERL5LIB = __FILE__;
@@ -77,8 +77,10 @@ BEGIN {
         # of ISBN 0-596-00313-7 Perl Cookbook, 2nd Edition.
 
         # avoid warning: Name "CORE::GLOBAL::binmode" used only once: possible typo at ...
-        *CORE::GLOBAL::binmode =
-        *CORE::GLOBAL::binmode = \&Char::Egbk::binmode;
+        if ($^O ne 'MacOS') {
+            *CORE::GLOBAL::binmode =
+            *CORE::GLOBAL::binmode = \&Char::Egbk::binmode;
+        }
         *CORE::GLOBAL::open    =
         *CORE::GLOBAL::open    = \&Char::Egbk::open;
     }
@@ -261,6 +263,15 @@ elsif (__PACKAGE__ =~ m/ \b Euhc \z/oxms) {
     $encoding_alias = qr/ \b (?: euc.*kr | kr.*euc | (?:x-)?uhc | (?:x-)?windows-949 | ks_c_5601-1987 | cp949 ) \b /oxmsi;
 }
 
+# US-ASCII
+elsif (__PACKAGE__ =~ m/ \b Eusascii \z/oxms) {
+    %range_tr = (
+        1 => [ [0x00..0xFF],
+             ],
+    );
+    $encoding_alias = qr/ \b (?: (?:US-?)?ASCII ) \b /oxmsi;
+}
+
 # Latin-1
 elsif (__PACKAGE__ =~ m/ \b Elatin1 \z/oxms) {
     %range_tr = (
@@ -369,6 +380,15 @@ elsif (__PACKAGE__ =~ m/ \b Elatin10 \z/oxms) {
     $encoding_alias = qr/ \b (?: ISO[-_ ]?8859-16 | IEC[- ]?8859-16 | Latin-?10 ) \b /oxmsi;
 }
 
+# Windows-1252
+elsif (__PACKAGE__ =~ m/ \b Ewindows1252 \z/oxms) {
+    %range_tr = (
+        1 => [ [0x00..0xFF],
+             ],
+    );
+    $encoding_alias = qr/ \b (?: Windows-?1252 ) \b /oxmsi;
+}
+
 # EUC-JP
 elsif (__PACKAGE__ =~ m/ \b Eeucjp \z/oxms) {
     %range_tr = (
@@ -441,8 +461,8 @@ sub Char::Egbk::ucfirst(@);
 sub Char::Egbk::ucfirst_();
 sub Char::Egbk::uc(@);
 sub Char::Egbk::uc_();
-sub Char::Egbk::capture($);
 sub Char::Egbk::ignorecase(@);
+sub Char::Egbk::capture($);
 sub Char::Egbk::chr(;$);
 sub Char::Egbk::chr_();
 sub Char::Egbk::filetest(@);
@@ -702,6 +722,12 @@ sub Char::Egbk::tr($$$$;$) {
     my $replacementlist = $_[3];
     my $modifier        = $_[4] || '';
 
+    if ($modifier =~ m/r/oxms) {
+        if ($bind_operator =~ m/ !~ /oxms) {
+            croak "$0: Using !~ with tr///r doesn't make sense";
+        }
+    }
+
     my @char            = $_[0] =~ m/\G ($q_char) /oxmsg;
     my @searchlist      = _charlist_tr($searchlist);
     my @replacementlist = _charlist_tr($replacementlist);
@@ -725,12 +751,12 @@ sub Char::Egbk::tr($$$$;$) {
     }
 
     my $tr = 0;
-    $_[0] = '';
+    my $replaced = '';
     if ($modifier =~ m/c/oxms) {
         while (defined(my $char = shift @char)) {
             if (not exists $tr{$char}) {
                 if (defined $replacementlist[0]) {
-                    $_[0] .= $replacementlist[0];
+                    $replaced .= $replacementlist[0];
                 }
                 $tr++;
                 if ($modifier =~ m/s/oxms) {
@@ -741,14 +767,14 @@ sub Char::Egbk::tr($$$$;$) {
                 }
             }
             else {
-                $_[0] .= $char;
+                $replaced .= $char;
             }
         }
     }
     else {
         while (defined(my $char = shift @char)) {
             if (exists $tr{$char}) {
-                $_[0] .= $tr{$char};
+                $replaced .= $tr{$char};
                 $tr++;
                 if ($modifier =~ m/s/oxms) {
                     while (@char and (exists $tr{$char[0]}) and ($tr{$char[0]} eq $tr{$char})) {
@@ -758,16 +784,22 @@ sub Char::Egbk::tr($$$$;$) {
                 }
             }
             else {
-                $_[0] .= $char;
+                $replaced .= $char;
             }
         }
     }
 
-    if ($bind_operator =~ m/ !~ /oxms) {
-        return not $tr;
+    if ($modifier =~ m/r/oxms) {
+        return $replaced;
     }
     else {
-        return $tr;
+        $_[0] = $replaced;
+        if ($bind_operator =~ m/ !~ /oxms) {
+            return not $tr;
+        }
+        else {
+            return $tr;
+        }
     }
 }
 
@@ -855,6 +887,9 @@ sub Char::Egbk::rindex($$;$) {
         qw(a b c d e f g h i j k l m n o p q r s t u v w x y z);
 
     if (0) {
+    }
+
+    elsif (__PACKAGE__ =~ m/ \b Eusascii \z/oxms) {
     }
 
     elsif (__PACKAGE__ =~ m/ \b Elatin1 \z/oxms) {
@@ -1365,6 +1400,45 @@ sub Char::Egbk::rindex($$;$) {
         );
     }
 
+    elsif (__PACKAGE__ =~ m/ \b Ewindows1252 \z/oxms) {
+        %lc = (%lc,
+            "\x8A" => "\x9A", # LATIN LETTER S WITH CARON
+            "\x8C" => "\x9C", # LATIN LIGATURE OE
+            "\x8E" => "\x9E", # LATIN LETTER Z WITH CARON
+            "\x9F" => "\xFF", # LATIN LETTER Y WITH DIAERESIS
+            "\xC0" => "\xE0", # LATIN LETTER A WITH GRAVE
+            "\xC1" => "\xE1", # LATIN LETTER A WITH ACUTE
+            "\xC2" => "\xE2", # LATIN LETTER A WITH CIRCUMFLEX
+            "\xC3" => "\xE3", # LATIN LETTER A WITH TILDE
+            "\xC4" => "\xE4", # LATIN LETTER A WITH DIAERESIS
+            "\xC5" => "\xE5", # LATIN LETTER A WITH RING ABOVE
+            "\xC6" => "\xE6", # LATIN LETTER AE
+            "\xC7" => "\xE7", # LATIN LETTER C WITH CEDILLA
+            "\xC8" => "\xE8", # LATIN LETTER E WITH GRAVE
+            "\xC9" => "\xE9", # LATIN LETTER E WITH ACUTE
+            "\xCA" => "\xEA", # LATIN LETTER E WITH CIRCUMFLEX
+            "\xCB" => "\xEB", # LATIN LETTER E WITH DIAERESIS
+            "\xCC" => "\xEC", # LATIN LETTER I WITH GRAVE
+            "\xCD" => "\xED", # LATIN LETTER I WITH ACUTE
+            "\xCE" => "\xEE", # LATIN LETTER I WITH CIRCUMFLEX
+            "\xCF" => "\xEF", # LATIN LETTER I WITH DIAERESIS
+            "\xD0" => "\xF0", # LATIN LETTER ETH
+            "\xD1" => "\xF1", # LATIN LETTER N WITH TILDE
+            "\xD2" => "\xF2", # LATIN LETTER O WITH GRAVE
+            "\xD3" => "\xF3", # LATIN LETTER O WITH ACUTE
+            "\xD4" => "\xF4", # LATIN LETTER O WITH CIRCUMFLEX
+            "\xD5" => "\xF5", # LATIN LETTER O WITH TILDE
+            "\xD6" => "\xF6", # LATIN LETTER O WITH DIAERESIS
+            "\xD8" => "\xF8", # LATIN LETTER O WITH STROKE
+            "\xD9" => "\xF9", # LATIN LETTER U WITH GRAVE
+            "\xDA" => "\xFA", # LATIN LETTER U WITH ACUTE
+            "\xDB" => "\xFB", # LATIN LETTER U WITH CIRCUMFLEX
+            "\xDC" => "\xFC", # LATIN LETTER U WITH DIAERESIS
+            "\xDD" => "\xFD", # LATIN LETTER Y WITH ACUTE
+            "\xDE" => "\xFE", # LATIN LETTER THORN
+        );
+    }
+
     # lower case first with parameter
     sub Char::Egbk::lcfirst(@) {
         if (@_) {
@@ -1418,6 +1492,9 @@ sub Char::Egbk::rindex($$;$) {
         qw(A B C D E F G H I J K L M N O P Q R S T U V W X Y Z);
 
     if (0) {
+    }
+
+    elsif (__PACKAGE__ =~ m/ \b Eusascii \z/oxms) {
     }
 
     elsif (__PACKAGE__ =~ m/ \b Elatin1 \z/oxms) {
@@ -1925,6 +2002,45 @@ sub Char::Egbk::rindex($$;$) {
             "\xFD" => "\xDD", # LATIN LETTER E WITH OGONEK
             "\xFE" => "\xDE", # LATIN LETTER T WITH COMMA BELOW
             "\xFF" => "\xBE", # LATIN LETTER Y WITH DIAERESIS
+        );
+    }
+
+    elsif (__PACKAGE__ =~ m/ \b Ewindows1252 \z/oxms) {
+        %uc = (%uc,
+            "\x9A" => "\x8A", # LATIN LETTER S WITH CARON
+            "\x9C" => "\x8C", # LATIN LIGATURE OE
+            "\x9E" => "\x8E", # LATIN LETTER Z WITH CARON
+            "\xE0" => "\xC0", # LATIN LETTER A WITH GRAVE
+            "\xE1" => "\xC1", # LATIN LETTER A WITH ACUTE
+            "\xE2" => "\xC2", # LATIN LETTER A WITH CIRCUMFLEX
+            "\xE3" => "\xC3", # LATIN LETTER A WITH TILDE
+            "\xE4" => "\xC4", # LATIN LETTER A WITH DIAERESIS
+            "\xE5" => "\xC5", # LATIN LETTER A WITH RING ABOVE
+            "\xE6" => "\xC6", # LATIN LETTER AE
+            "\xE7" => "\xC7", # LATIN LETTER C WITH CEDILLA
+            "\xE8" => "\xC8", # LATIN LETTER E WITH GRAVE
+            "\xE9" => "\xC9", # LATIN LETTER E WITH ACUTE
+            "\xEA" => "\xCA", # LATIN LETTER E WITH CIRCUMFLEX
+            "\xEB" => "\xCB", # LATIN LETTER E WITH DIAERESIS
+            "\xEC" => "\xCC", # LATIN LETTER I WITH GRAVE
+            "\xED" => "\xCD", # LATIN LETTER I WITH ACUTE
+            "\xEE" => "\xCE", # LATIN LETTER I WITH CIRCUMFLEX
+            "\xEF" => "\xCF", # LATIN LETTER I WITH DIAERESIS
+            "\xF0" => "\xD0", # LATIN LETTER ETH
+            "\xF1" => "\xD1", # LATIN LETTER N WITH TILDE
+            "\xF2" => "\xD2", # LATIN LETTER O WITH GRAVE
+            "\xF3" => "\xD3", # LATIN LETTER O WITH ACUTE
+            "\xF4" => "\xD4", # LATIN LETTER O WITH CIRCUMFLEX
+            "\xF5" => "\xD5", # LATIN LETTER O WITH TILDE
+            "\xF6" => "\xD6", # LATIN LETTER O WITH DIAERESIS
+            "\xF8" => "\xD8", # LATIN LETTER O WITH STROKE
+            "\xF9" => "\xD9", # LATIN LETTER U WITH GRAVE
+            "\xFA" => "\xDA", # LATIN LETTER U WITH ACUTE
+            "\xFB" => "\xDB", # LATIN LETTER U WITH CIRCUMFLEX
+            "\xFC" => "\xDC", # LATIN LETTER U WITH DIAERESIS
+            "\xFD" => "\xDD", # LATIN LETTER Y WITH ACUTE
+            "\xFE" => "\xDE", # LATIN LETTER THORN
+            "\xFF" => "\x9F", # LATIN LETTER Y WITH DIAERESIS
         );
     }
 
@@ -5244,10 +5360,10 @@ sub Char::Egbk::binmode(*;$) {
         local $^W = 0;
         if (ref $_[0]) {
             my $filehandle = qualify_to_ref $_[0];
-            return CORE::binmode $filehandle;
+            return eval { CORE::binmode $filehandle; };
         }
         else {
-            return CORE::binmode *{(caller(1))[0] . "::$_[0]"};
+            return eval { CORE::binmode *{(caller(1))[0] . "::$_[0]"}; };
         }
     }
     elsif (@_ == 2) {
@@ -5256,17 +5372,20 @@ sub Char::Egbk::binmode(*;$) {
         if ($layer =~ m/\A :raw \z/oxms) {
             local $^W = 0;
             if ($_[0] =~ m/\A (?: STDIN | STDOUT | STDERR ) \z/oxms) {
-                return CORE::binmode $_[0];
+                return eval { CORE::binmode $_[0]; };
             }
             elsif (ref $_[0]) {
                 my $filehandle = qualify_to_ref $_[0];
-                return CORE::binmode $filehandle;
+                return eval { CORE::binmode $filehandle; };
             }
             else {
-                return CORE::binmode *{(caller(1))[0] . "::$_[0]"};
+                return eval { CORE::binmode *{(caller(1))[0] . "::$_[0]"}; };
             }
         }
         elsif ($layer =~ m/\A :crlf \z/oxms) {
+            if ($^O !~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
+                croak "$0: open: Unknown binmode() layer '$layer'";
+            }
             return;
         }
         else {
@@ -5314,7 +5433,11 @@ sub Char::Egbk::open(*;$@) {
         my(undef,$mode,$expr) = @_;
 
         $mode =~ s/ :? encoding\($encoding_alias\) //oxms;
-        $mode =~ s/ :crlf //oxms;
+        if ($mode =~ s/ :crlf //oxms) {
+            if ($^O !~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
+                croak "$0: open: Unknown open() mode '$mode'";
+            }
+        }
         my $binmode = $mode =~ s/ :raw //oxms;
 
         if (eval q{ use Fcntl qw(O_RDONLY O_WRONLY O_RDWR O_CREAT O_TRUNC O_APPEND); 1 }) {
@@ -5335,7 +5458,7 @@ sub Char::Egbk::open(*;$@) {
             if ($o_flags{$mode}) {
                 my $sysopen = CORE::sysopen $filehandle, $expr, $o_flags{$mode};
                 if ($sysopen and $binmode) {
-                    CORE::binmode $filehandle;
+                    eval { CORE::binmode $filehandle; };
                 }
                 return $sysopen;
             }
@@ -5349,14 +5472,14 @@ sub Char::Egbk::open(*;$@) {
         if ($mode eq '|-') {
             my $open = CORE::open $filehandle, qq{| $expr};
             if ($open and $binmode) {
-                CORE::binmode $filehandle;
+                eval { CORE::binmode $filehandle; };
             }
             return $open;
         }
         elsif ($mode eq '-|') {
             my $open = CORE::open $filehandle, qq{$expr |};
             if ($open and $binmode) {
-                CORE::binmode $filehandle;
+                eval { CORE::binmode $filehandle; };
             }
             return $open;
         }
@@ -5369,7 +5492,7 @@ sub Char::Egbk::open(*;$@) {
             $expr =~ s#\A([ ])#./$1#oxms;
             my $open = CORE::open $filehandle, qq{$mode $expr\0};
             if ($open and $binmode) {
-                CORE::binmode $filehandle;
+                eval { CORE::binmode $filehandle; };
             }
             return $open;
         }
@@ -5601,8 +5724,8 @@ Char::Egbk - Run-time routines for Char/GBK.pm
     Char::Egbk::uc_;
     Char::Egbk::ucfirst(...);
     Char::Egbk::ucfirst_;
-    Char::Egbk::capture(...);
     Char::Egbk::ignorecase(...);
+    Char::Egbk::capture(...);
     Char::Egbk::chr(...);
     Char::Egbk::chr_;
     Char::Egbk::X ...;
@@ -5624,8 +5747,8 @@ Char::Egbk - Run-time routines for Char/GBK.pm
 
 =head1 ABSTRACT
 
-This module is a run-time routines of the Char::GBK module.
-Because the Char::GBK module automatically uses this module, you need not use directly.
+This module is a run-time routines of the Char/GBK.pm.
+Because the Char/GBK.pm automatically uses this module, you need not use directly.
 
 =head1 BUGS AND LIMITATIONS
 
@@ -5772,17 +5895,17 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   uppercased. This is the internal function implementing the \u escape in double-
   quoted strings.
 
-=item Make capture number
-
-  $capturenumber = Char::Egbk::capture($string);
-
-  This function is internal use to m/ /i, s/ / /i, split and qr/ /i.
-
 =item Make ignore case string
 
   @ignorecase = Char::Egbk::ignorecase(@string);
 
-  This function is internal use to m/ /i, s/ / /i, split and qr/ /i.
+  This function is internal use to m/ /i, s/ / /i, split / /i and qr/ /i.
+
+=item Make capture number
+
+  $capturenumber = Char::Egbk::capture($string);
+
+  This function is internal use to m/ /, s/ / /, split / / and qr/ /.
 
 =item Make character
 
@@ -5970,7 +6093,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   otherwise (and puts the error code into $!).
 
   This function can't function when the $dirname ends with chr(0x5C) on perl5.006,
-  perl5.008, perl5.010, perl5.012 on MSWin32.
+  perl5.008, perl5.010, perl5.012, perl5.014 on MSWin32.
 
 =item do file
 
@@ -6046,7 +6169,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 =item current position of the readdir
 
-  Char::Egbk::telldir(DIRHANDLE);
+  $telldir = Char::Egbk::telldir(DIRHANDLE);
 
   This function returns the current position of the readdir routines on DIRHANDLE.
   This value may be given to seekdir to access a particular location in a directory.
@@ -6054,6 +6177,119 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   corresponding system library routine. This function might not be implemented
   everywhere that readdir is. Even if it is, no calculation may be done with the
   return value. It's just an opaque value, meaningful only to seekdir.
+
+=item binary mode (Perl5.6 emulation on perl5.005)
+
+  Char::Egbk::binmode(FILEHANDLE, $disciplines);
+  Char::Egbk::binmode(FILEHANDLE);
+  Char::Egbk::binmode($filehandle, $disciplines);
+  Char::Egbk::binmode($filehandle);
+
+  * two arguments
+
+  If you are using perl5.005 other than MacPerl, Char::GBK software emulate perl5.6's
+  binmode function. Only the point is here. See also perlfunc/binmode for details.
+
+  This function arranges for the FILEHANDLE to have the semantics specified by the
+  $disciplines argument. If $disciplines is omitted, ':raw' semantics are applied
+  to the filehandle. If FILEHANDLE is an expression, the value is taken as the
+  name of the filehandle or a reference to a filehandle, as appropriate.
+  The binmode function should be called after the open but before any I/O is done
+  on the filehandle. The only way to reset the mode on a filehandle is to reopen
+  the file, since the various disciplines may have treasured up various bits and
+  pieces of data in various buffers.
+
+  The ":raw" discipline tells Perl to keep its cotton-pickin' hands off the data.
+  For more on how disciplines work, see the open function.
+
+=item open file (Perl5.6 emulation on perl5.005)
+
+  $rc = Char::Egbk::open(FILEHANDLE, $mode, $expr);
+  $rc = Char::Egbk::open(FILEHANDLE, $expr);
+  $rc = Char::Egbk::open(FILEHANDLE);
+  $rc = Char::Egbk::open(my $filehandle, $mode, $expr);
+  $rc = Char::Egbk::open(my $filehandle, $expr);
+  $rc = Char::Egbk::open(my $filehandle);
+
+  * autovivification filehandle
+  * three arguments
+
+  If you are using perl5.005, Char::GBK software emulate perl5.6's open function.
+  Only the point is here. See also perlfunc/open for details.
+
+  As that example shows, the FILEHANDLE argument is often just a simple identifier
+  (normally uppercase), but it may also be an expression whose value provides a
+  reference to the actual filehandle. (The reference may be either a symbolic
+  reference to the filehandle name or a hard reference to any object that can be
+  interpreted as a filehandle.) This is called an indirect filehandle, and any
+  function that takes a FILEHANDLE as its first argument can handle indirect
+  filehandles as well as direct ones. But open is special in that if you supply
+  it with an undefined variable for the indirect filehandle, Perl will automatically
+  define that variable for you, that is, autovivifying it to contain a proper
+  filehandle reference.
+
+  {
+      my $fh;                          # (uninitialized)
+      Char::Egbk::open($fh, ">logfile")     # $fh is autovivified
+          or die "Can't create logfile: $!";
+          ...                          # do stuff with $fh
+  }                                    # $fh closed here
+
+  The my $fh declaration can be readably incorporated into the open:
+
+  Char::Egbk::open my $fh, ">logfile" or die ...
+
+  The > symbol you've been seeing in front of the filename is an example of a mode.
+  Historically, the two-argument form of open came first. The recent addition of
+  the three-argument form lets you separate the mode from the filename, which has
+  the advantage of avoiding any possible confusion between the two. In the following
+  example, we know that the user is not trying to open a filename that happens to
+  start with ">". We can be sure that they're specifying a $mode of ">", which opens
+  the file named in $expr for writing, creating the file if it doesn't exist and
+  truncating the file down to nothing if it already exists:
+
+  Char::Egbk::open(LOG, ">", "logfile") or die "Can't create logfile: $!";
+
+  With the one- or two-argument form of open, you have to be careful when you use
+  a string variable as a filename, since the variable may contain arbitrarily
+  weird characters (particularly when the filename has been supplied by arbitrarily
+  weird characters on the Internet). If you're not careful, parts of the filename
+  might get interpreted as a $mode string, ignorable whitespace, a dup specification,
+  or a minus.
+  Here's one historically interesting way to insulate yourself:
+
+  $path =~ s#^([ ])#./$1#;
+  Char::Egbk::open (FH, "< $path\0") or die "can't open $path: $!";
+
+  But that's still broken in several ways. Instead, just use the three-argument
+  form of open to open any arbitrary filename cleanly and without any (extra)
+  security risks:
+
+  Char::Egbk::open(FH, "<", $path) or die "can't open $path: $!";
+
+  As of the 5.6 release of Perl, you can specify binary mode in the open function
+  without a separate call to binmode. As part of the $mode
+  argument (but only in the three-argument form), you may specify various input
+  and output disciplines.
+  To do the equivalent of a binmode, use the three argument form of open and stuff
+  a discipline of :raw in after the other $mode characters:
+
+  Char::Egbk::open(FH, "<:raw", $path) or die "can't open $path: $!";
+
+  Table 1. I/O Disciplines
+  -------------------------------------------------
+  Discipline      Meaning
+  -------------------------------------------------
+  :raw            Binary mode; do no processing
+  :crlf           Text mode; Intuit newlines
+                  (DOS-like system only)
+  :encoding(...)  Legacy encoding
+  -------------------------------------------------
+
+  You'll be able to stack disciplines that make sense to stack, so, for instance,
+  you could say:
+
+  Char::Egbk::open(FH, "<:crlf:encoding(Char::GBK)", $path) or die "can't open $path: $!";
 
 =back
 
