@@ -15,10 +15,6 @@ if ($chcp !~ /932|950/oxms) {
     exit;
 }
 
-open(FILE,'>F機能') || die "Can't open file: F機能\n";
-print FILE "1\n";
-close(FILE);
-
 # dbmopen
 my %DBM;
 if (dbmopen(%DBM,'F機能',0777)) {

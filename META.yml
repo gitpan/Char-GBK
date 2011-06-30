@@ -1,7 +1,7 @@
 --- #YAML:1.0
 name: GBK
 abstract: Source code filter for GBK script
-version: 0.75
+version: 0.76
 author:
   - INABA Hitoshi <ina@cpan.org>
 license: perl
