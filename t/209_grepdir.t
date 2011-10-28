@@ -187,7 +187,6 @@ sub grepfile ($$) {
 __END__
 
 WindowsでPerl 5.8/5.10を使うモンじゃない
-http://www.aritia.org/hizumi/perl/perlwin.html
 
 の「ここで紹介したスクリプトのサンプル」の grepdir.pl を利用しています。
 
