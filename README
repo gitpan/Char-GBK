@@ -426,5 +426,5 @@ See also code table:
 
 SEE ALSO
 
-perl, Sjis.pm
+perl, GBK.pm, Egbk.pm, jacode.pl
 

@@ -18,7 +18,7 @@ use Char::Egbk;
 
 BEGIN { eval q{ use vars qw($VERSION) } }
 
-$VERSION = sprintf '%d.%02d', q$Revision: 0.78 $ =~ m/(\d+)/oxmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.79 $ =~ m/(\d+)/oxmsg;
 
 # poor Symbol.pm - substitute of real Symbol.pm
 BEGIN {
@@ -5161,7 +5161,7 @@ incompatible upgrade part to traditional Perl should be rewound.
 You need write 'use Char::GBK;' in your script.
 
   ---------------------------------
-  Before      After
+  Before      You do
   ---------------------------------
   (nothing)   use Char::GBK;
   ---------------------------------
@@ -5248,10 +5248,12 @@ Also POSIX-style character classes.
   [:digit:]     [\x30-\x39]
   [:graph:]     [\x21-\x7F]
   [:lower:]     [\x61-\x7A]
+                [\x41-\x5A\x61-\x7A]     (/i modifier)
   [:print:]     [\x20-\x7F]
   [:punct:]     [\x21-\x2F\x3A-\x3F\x40\x5B-\x5F\x60\x7B-\x7E]
   [:space:]     [\x09\x0A\x0B\x0C\x0D\x20]
   [:upper:]     [\x41-\x5A]
+                [\x41-\x5A\x61-\x7A]     (/i modifier)
   [:word:]      [\x30-\x39\x41-\x5A\x5F\x61-\x7A]
   [:xdigit:]    [\x30-\x39\x41-\x46\x61-\x66]
   [:^alnum:]    (?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x30-\x39\x41-\x5A\x61-\x7A])
@@ -5262,10 +5264,12 @@ Also POSIX-style character classes.
   [:^digit:]    (?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x30-\x39])
   [:^graph:]    (?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x21-\x7F])
   [:^lower:]    (?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x61-\x7A])
+                (?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])           (/i modifier)
   [:^print:]    (?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x20-\x7F])
   [:^punct:]    (?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x21-\x2F\x3A-\x3F\x40\x5B-\x5F\x60\x7B-\x7E])
   [:^space:]    (?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x09\x0A\x0B\x0C\x0D\x20])
   [:^upper:]    (?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x41-\x5A])
+                (?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])           (/i modifier)
   [:^word:]     (?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x30-\x39\x41-\x5A\x5F\x61-\x7A])
   [:^xdigit:]   (?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x30-\x39\x41-\x46\x61-\x66])
   ---------------------------------------------------------------------------
@@ -5328,7 +5332,7 @@ functions.
 
 =head1 Un-Escaping bytes::* Functions (Char/GBK.pm provides)
 
-Char/GBK.pm remove 'bytes::' at head of function name.
+Char/GBK.pm removes 'bytes::' at head of function name.
 
   ------------------------------------
   Before           After
@@ -5343,7 +5347,7 @@ Char/GBK.pm remove 'bytes::' at head of function name.
 
 =head1 Un-Escaping \ Of \N, \p, \P and \X (Char/GBK.pm provides)
 
-Char/GBK.pm remove '\' at head of alphanumeric regexp metasymbols \N, \p, \P
+Char/GBK.pm removes '\' at head of alphanumeric regexp metasymbols \N, \p, \P
 and \X. By this method, you can avoid the trap of the abstraction.
 
   ------------------------------------
@@ -5365,37 +5369,37 @@ and \X. By this method, you can avoid the trap of the abstraction.
 
 Insert 'Char::Egbk::' instead of '-' of operator.
 
-  ---------------------------------
-  Before      After
-  ---------------------------------
-  -r          Char::Egbk::r
-  -w          Char::Egbk::w
-  -x          Char::Egbk::x
-  -o          Char::Egbk::o
-  -R          Char::Egbk::R
-  -W          Char::Egbk::W
-  -X          Char::Egbk::X
-  -O          Char::Egbk::O
-  -e          Char::Egbk::e
-  -z          Char::Egbk::z
-  -f          Char::Egbk::f
-  -d          Char::Egbk::d
-  -l          Char::Egbk::l
-  -p          Char::Egbk::p
-  -S          Char::Egbk::S
-  -b          Char::Egbk::b
-  -c          Char::Egbk::c
-  -t          -t
-  -u          Char::Egbk::u
-  -g          Char::Egbk::g
-  -k          Char::Egbk::k
-  -T          Char::Egbk::T
-  -B          Char::Egbk::B
-  -s          Char::Egbk::s
-  -M          Char::Egbk::M
-  -A          Char::Egbk::A
-  -C          Char::Egbk::C
-  ---------------------------------
+  --------------------------------------------------------------------------
+  Before   After      Meaning
+  --------------------------------------------------------------------------
+  -r       Char::Egbk::r   File is readable by effective uid/gid
+  -w       Char::Egbk::w   File is writable by effective uid/gid
+  -x       Char::Egbk::x   File is executable by effective uid/gid
+  -o       Char::Egbk::o   File is owned by effective uid
+  -R       Char::Egbk::R   File is readable by real uid/gid
+  -W       Char::Egbk::W   File is writable by real uid/gid
+  -X       Char::Egbk::X   File is executable by real uid/gid
+  -O       Char::Egbk::O   File is owned by real uid
+  -e       Char::Egbk::e   File exists
+  -z       Char::Egbk::z   File has zero size
+  -f       Char::Egbk::f   File is a plain file
+  -d       Char::Egbk::d   File is a directory
+  -l       Char::Egbk::l   File is a symbolic link
+  -p       Char::Egbk::p   File is a named pipe (FIFO)
+  -S       Char::Egbk::S   File is a socket
+  -b       Char::Egbk::b   File is a block special file
+  -c       Char::Egbk::c   File is a character special file
+  -t       -t         Filehandle is opened to a tty
+  -u       Char::Egbk::u   File has setuid bit set
+  -g       Char::Egbk::g   File has setgid bit set
+  -k       Char::Egbk::k   File has sticky bit set
+  -T       Char::Egbk::T   File is a text file
+  -B       Char::Egbk::B   File is a binary file (opposite of -T)
+  -s       Char::Egbk::s   File has nonzero size (returns size in bytes)
+  -M       Char::Egbk::M   Age of file (at startup) in days since modification
+  -A       Char::Egbk::A   Age of file (at startup) in days since last access
+  -C       Char::Egbk::C   Age of file (at startup) in days since inode change
+  --------------------------------------------------------------------------
 
 As of Perl 5.00503, as a form of purely syntactic sugar, you can stack file
 test operators, in a way that -w -x $file is equivalent to -x $file && -w _ .
@@ -5422,16 +5426,38 @@ Back to and see 'Escaping Your Script'. Enjoy hacking!!
 You need write 'Char::GBK::' at head of function name when you want character
 oriented function. See 'Character Oriented Functions'.
 
-  ---------------------------------
-  Before      After
-  ---------------------------------
-  ord         Char::GBK::ord
-  reverse     Char::GBK::reverse
-  length      Char::GBK::length
-  substr      Char::GBK::substr
-  index       Char::GBK::index
-  rindex      Char::GBK::rindex
-  ---------------------------------
+  --------------------------------------------------------
+  Function   Character Oriented   Description
+  --------------------------------------------------------
+  ord        Char::GBK::ord
+  reverse    Char::GBK::reverse
+  length     Char::GBK::length
+  substr     Char::GBK::substr
+  index      Char::GBK::index          See 'About Indexes'
+  rindex     Char::GBK::rindex         See 'About Rindexes'
+  --------------------------------------------------------
+
+  About Indexes
+  -------------------------------------------------------------------------
+  Function       Works as    Returns as   Description
+  -------------------------------------------------------------------------
+  index          Character   Byte         JPerl semantics (most useful)
+  (same as Char::Egbk::index)
+  Char::GBK::index    Character   Character    Character-oriented semantics
+  CORE::index    Byte        Byte         Byte-oriented semantics
+  (nothing)      Byte        Character    (most useless)
+  -------------------------------------------------------------------------
+
+  About Rindexes
+  -------------------------------------------------------------------------
+  Function       Works as    Returns as   Description
+  -------------------------------------------------------------------------
+  rindex         Character   Byte         JPerl semantics (most useful)
+  (same as Char::Egbk::rindex)
+  Char::GBK::rindex   Character   Character    Character-oriented semantics
+  CORE::rindex   Byte        Byte         Byte-oriented semantics
+  (nothing)      Byte        Character    (most useless)
+  -------------------------------------------------------------------------
 
 =head1 Character Oriented Functions
 
@@ -5970,7 +5996,7 @@ programming environment like at that time.
 
  Programming Perl, Second Edition
  By Larry Wall, Tom Christiansen, Randal L. Schwartz
- January 1900 (really so?)
+ October 1996
  Pages: 670
  ISBN 10: 1-56592-149-6 | ISBN 13: 9781565921498
  http://shop.oreilly.com/product/9781565921498.do
@@ -5981,6 +6007,16 @@ programming environment like at that time.
  Pages: 1104
  ISBN 10: 0-596-00027-8 | ISBN 13: 9780596000271
  http://shop.oreilly.com/product/9780596000271.do
+
+ Programming Perl, 4th Edition
+ By: Tom Christiansen, brian d foy, Larry Wall, Jon Orwant
+ Publisher: O'Reilly Media
+ Formats: Print, Ebook, Safari Books Online
+ Released: February 2012
+ Pages: 1054
+ Print ISBN: 978-0-596-00492-7 | ISBN 10: 0-596-00492-3
+ Ebook ISBN: 978-1-4493-9890-3 | ISBN 10: 1-4493-9890-1
+ http://shop.oreilly.com/product/9780596004927.do
 
  Perl Cookbook, Second Edition
  By Tom Christiansen, Nathan Torkington
