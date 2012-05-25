@@ -8,11 +8,16 @@ package Egbk;
 ######################################################################
 
 use 5.00503;
-use strict qw(subs vars);
 
 BEGIN {
     if ($^X =~ m/ jperl /oxmsi) {
-        die "$0 need perl(not jperl) 5.00503 or later. (\$^X==$^X)";
+        die __FILE__, ": needs perl(not jperl) 5.00503 or later. (\$^X==$^X)";
+    }
+    if (ord('A') == 193) {
+        die __FILE__, ": is not US-ASCII script (may be EBCDIC or EBCDIK script).";
+    }
+    if (ord('A') != 0x41) {
+        die __FILE__, ": is not US-ASCII script (must be US-ASCII script).";
     }
 }
 
@@ -22,7 +27,7 @@ BEGIN {
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.80 $ =~ m/(\d+)/xmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.81 $ =~ m/(\d+)/xmsg;
 
 BEGIN {
     my $PERL5LIB = __FILE__;
@@ -77,6 +82,9 @@ BEGIN {
 
     sub gensym () {
         my $name = "GEN" . $genseq++;
+
+        # here, no strict qw(refs); if strict.pm exists
+
         my $ref = \*{$genpkg . $name};
         delete $$genpkg{$name};
         $ref;
@@ -103,8 +111,17 @@ BEGIN {
     }
 
     sub qualify_to_ref ($;$) {
-        no strict qw(refs);
+
+        # here, no strict qw(refs); if strict.pm exists
+
         return \*{ qualify $_[0], @_ > 1 ? $_[1] : caller };
+    }
+}
+
+# use strict; if strict.pm exists
+BEGIN {
+    if (eval {CORE::require strict}) {
+        strict::->import;
     }
 }
 
@@ -127,8 +144,6 @@ sub croak(@);
 sub cluck(@);
 sub confess(@);
 
-my $__FILE__ = __FILE__;
-
 my $your_char = q{[\x81-\xFE][\x00-\xFF]|[\x00-\xFF]};
 
 # regexp of character
@@ -144,48 +159,24 @@ my $is_eucjp_family    = 0;
 #
 # alias of encoding name
 #
-
 BEGIN { eval q{ use vars qw($encoding_alias) } }
+
+#
+# GBK case conversion
+#
+my %lc = ();
+@lc{qw(A B C D E F G H I J K L M N O P Q R S T U V W X Y Z)} =
+    qw(a b c d e f g h i j k l m n o p q r s t u v w x y z);
+my %uc = ();
+@uc{qw(a b c d e f g h i j k l m n o p q r s t u v w x y z)} =
+    qw(A B C D E F G H I J K L M N O P Q R S T U V W X Y Z);
+my %fc = ();
+@fc{qw(A B C D E F G H I J K L M N O P Q R S T U V W X Y Z)} =
+    qw(a b c d e f g h i j k l m n o p q r s t u v w x y z);
 
 if (0) {
 }
 
-# Big5HKSCS
-elsif (__PACKAGE__ =~ m/ \b Ebig5hkscs \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0x80,0xFF],
-             ],
-        2 => [ [0x81..0xFE],[0x40..0x7E,0xA1..0xFE],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: big5-?hk(?:scs)? | hk(?:scs)?[-_]?big5 ) \b /oxmsi;
-}
-
-# Big5Plus
-elsif (__PACKAGE__ =~ m/ \b Ebig5plus \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0x80,0xFF],
-             ],
-        2 => [ [0x81..0xFE],[0x40..0x7E,0x80..0xFE],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: big-?5-?(?:plus)? | big5-?et(?:en)? | tca[-_]?big5 ) \b /oxmsi;
-}
-
-# GB18030
-elsif (__PACKAGE__ =~ m/ \b Egb18030 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0x80,0xFF],
-             ],
-        2 => [ [0x81..0xFE],[0x40..0x7E,0x80..0xFE],
-             ],
-        4 => [ [0x81..0xFE],[0x30..0x39],[0x81..0xFE],[0x30..0x39],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: euc.*cn | cn.*euc | gbk | cp936 | gb[-_ ]?2312(?!-?raw) | gb18030 ) \b /oxmsi;
-}
-
-# GBK
 elsif (__PACKAGE__ =~ m/ \b Egbk \z/oxms) {
     %range_tr = (
         1 => [ [0x00..0x80,0xFF],
@@ -196,260 +187,8 @@ elsif (__PACKAGE__ =~ m/ \b Egbk \z/oxms) {
     $encoding_alias = qr/ \b (?: euc.*cn | cn.*euc | gbk | cp936 | gb[-_ ]?2312(?!-?raw) ) \b /oxmsi;
 }
 
-# HP-15
-elsif (__PACKAGE__ =~ m/ \b Ehp15 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0x7F,0xA1..0xDF,0xFF],
-             ],
-        2 => [ [0x80..0xA0,0xE0..0xFE],[0x21..0x7E,0x80..0xFF],
-             ],
-    );
-    $is_shiftjis_family = 1;
-    $encoding_alias = qr/ \b (?: hp-?15 ) \b /oxmsi;
-}
-
-# INFORMIX V6 ALS
-elsif (__PACKAGE__ =~ m/ \b Einformixv6als \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0x80,0xA0..0xDF,0xFE..0xFF],
-             ],
-        2 => [ [0x81..0x9F,0xE0..0xFC],[0x40..0x7E,0x80..0xFC],
-             ],
-        3 => [ [0xFD..0xFD],[0xA1..0xFE],[0xA1..0xFE],
-             ],
-    );
-    $is_shiftjis_family = 1;
-    $encoding_alias = qr/ \b (?: informix(?:v6als)? ) \b /oxmsi;
-}
-
-# Shift_JIS
-elsif (__PACKAGE__ =~ m/ \b E s j i s \z/oxms) { # escape from build system
-    %range_tr = (
-        1 => [ [0x00..0x80,0xA0..0xDF,0xFD..0xFF],
-             ],
-        2 => [ [0x81..0x9F,0xE0..0xFC],[0x40..0x7E,0x80..0xFC],
-             ],
-    );
-    $is_shiftjis_family = 1;
-    $encoding_alias = qr/ \b (?: shift.*jis | sjis | windows-31j | cp932 ) \b /oxmsi;
-}
-
-# UHC
-elsif (__PACKAGE__ =~ m/ \b Euhc \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0x80,0xFF],
-             ],
-        2 => [ [0x81..0xFE],[0x41..0x5A,0x61..0x7A,0x81..0xFE],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: euc.*kr | kr.*euc | (?:x-)?uhc | (?:x-)?windows-949 | ks_c_5601-1987 | cp949 ) \b /oxmsi;
-}
-
-# US-ASCII
-elsif (__PACKAGE__ =~ m/ \b Eusascii \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: (?:us-?)?ascii ) \b /oxmsi;
-}
-
-# Latin-1
-elsif (__PACKAGE__ =~ m/ \b Elatin1 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: iso[-_ ]?8859-1 | iec[- ]?8859-1 | latin-?1 ) \b /oxmsi;
-}
-
-# Latin-2
-elsif (__PACKAGE__ =~ m/ \b Elatin2 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: iso[-_ ]?8859-2 | iec[- ]?8859-2 | latin-?2 ) \b /oxmsi;
-}
-
-# Latin-3
-elsif (__PACKAGE__ =~ m/ \b Elatin3 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: iso[-_ ]?8859-3 | iec[- ]?8859-3 | latin-?3 ) \b /oxmsi;
-}
-
-# Latin-4
-elsif (__PACKAGE__ =~ m/ \b Elatin4 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: iso[-_ ]?8859-4 | iec[- ]?8859-4 | latin-?4 ) \b /oxmsi;
-}
-
-# Cyrillic
-elsif (__PACKAGE__ =~ m/ \b Ecyrillic \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: iso[-_ ]?8859-5 | iec[- ]?8859-5 | cyrillic ) \b /oxmsi;
-}
-
-# KOI8-R
-elsif (__PACKAGE__ =~ m/ \b Ekoi8r \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: koi8-?r ) \b /oxmsi;
-}
-
-# KOI8-U
-elsif (__PACKAGE__ =~ m/ \b Ekoi8u \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: koi8-?u ) \b /oxmsi;
-}
-
-# Greek
-elsif (__PACKAGE__ =~ m/ \b Egreek \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: iso[-_ ]?8859-7 | iec[- ]?8859-7 | greek ) \b /oxmsi;
-}
-
-# Latin-5
-elsif (__PACKAGE__ =~ m/ \b Elatin5 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: iso[-_ ]?8859-9 | iec[- ]?8859-9 | latin-?5 ) \b /oxmsi;
-}
-
-# Latin-6
-elsif (__PACKAGE__ =~ m/ \b Elatin6 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: iso[-_ ]?8859-10 | iec[- ]?8859-10 | latin-?6 ) \b /oxmsi;
-}
-
-# Latin-7
-elsif (__PACKAGE__ =~ m/ \b Elatin7 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: iso[-_ ]?8859-13 | iec[- ]?8859-13 | latin-?7 ) \b /oxmsi;
-}
-
-# Latin-8
-elsif (__PACKAGE__ =~ m/ \b Elatin8 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: iso[-_ ]?8859-14 | iec[- ]?8859-14 | latin-?8 ) \b /oxmsi;
-}
-
-# Latin-9
-elsif (__PACKAGE__ =~ m/ \b Elatin9 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: iso[-_ ]?8859-15 | iec[- ]?8859-15 | latin-?9 ) \b /oxmsi;
-}
-
-# Latin-10
-elsif (__PACKAGE__ =~ m/ \b Elatin10 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: iso[-_ ]?8859-16 | iec[- ]?8859-16 | latin-?10 ) \b /oxmsi;
-}
-
-# Windows-1252
-elsif (__PACKAGE__ =~ m/ \b Ewindows1252 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: windows-?1252 ) \b /oxmsi;
-}
-
-# Windows-1258
-elsif (__PACKAGE__ =~ m/ \b Ewindows1258 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: windows-?1258 ) \b /oxmsi;
-}
-
-# EUC-JP
-elsif (__PACKAGE__ =~ m/ \b Eeucjp \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0x8D,0x90..0xA0,0xFF],
-             ],
-        2 => [ [0x8E..0x8E],[0xA1..0xDF],
-               [0xA1..0xFE],[0xA1..0xFE],
-             ],
-        3 => [ [0x8F..0x8F],[0xA1..0xFE],[0xA1..0xFE],
-             ],
-    );
-    $is_eucjp_family = 1;
-    $encoding_alias = qr/ \b (?: euc.*jp | jp.*euc | ujis ) \b /oxmsi;
-}
-
-# UTF-2
-elsif (__PACKAGE__ =~ m/ \b Eutf2 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0x7F],
-             ],
-        2 => [ [0xC2..0xDF],[0x80..0xBF],
-             ],
-        3 => [ [0xE0..0xE0],[0xA0..0xBF],[0x80..0xBF],
-               [0xE1..0xEC],[0x80..0xBF],[0x80..0xBF],
-               [0xED..0xED],[0x80..0x9F],[0x80..0xBF],
-               [0xEE..0xEF],[0x80..0xBF],[0x80..0xBF],
-             ],
-        4 => [ [0xF0..0xF0],[0x90..0xBF],[0x80..0xBF],[0x80..0xBF],
-               [0xF1..0xF3],[0x80..0xBF],[0x80..0xBF],[0x80..0xBF],
-               [0xF4..0xF4],[0x80..0x8F],[0x80..0xBF],[0x80..0xBF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: utf-8 | utf-8-strict | utf-?2 ) \b /oxmsi;
-}
-
-# Old UTF-8
-elsif (__PACKAGE__ =~ m/ \b Eoldutf8 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0x7F],
-             ],
-        2 => [ [0xC0..0xDF],[0x80..0xBF],
-             ],
-        3 => [ [0xE0..0xEF],[0x80..0xBF],[0x80..0xBF],
-             ],
-        4 => [ [0xF0..0xF4],[0x80..0xBF],[0x80..0xBF],[0x80..0xBF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: utf8 | cesu-?8 | modified[ ]?utf-?8 | old[ ]?utf-?8 ) \b /oxmsi;
-}
-
 else {
-    croak "$0 don't know my package name '" . __PACKAGE__ . "'";
+    croak "Don't know my package name '@{[__PACKAGE__]}'";
 }
 
 #
@@ -470,6 +209,8 @@ sub Egbk::ucfirst(@);
 sub Egbk::ucfirst_();
 sub Egbk::uc(@);
 sub Egbk::uc_();
+sub Egbk::fc(@);
+sub Egbk::fc_();
 sub Egbk::ignorecase(@);
 sub Egbk::classic_character_class($);
 sub Egbk::capture($);
@@ -590,7 +331,7 @@ use vars qw(
 @{Egbk::eS}          = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x09\x0A\x0C\x0D\x20])};
 @{Egbk::eW}          = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE0-9A-Z_a-z])};
 @{Egbk::eH}          = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x09\x20])};
-@{Egbk::eV}          = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x0C\x0A\x0D])};
+@{Egbk::eV}          = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x0A\x0B\x0C\x0D])};
 @{Egbk::eR}          = qr{(?:\x0D\x0A|[\x0A\x0D])};
 @{Egbk::eN}          = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x0A])};
 @{Egbk::not_alnum}   = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x30-\x39\x41-\x5A\x61-\x7A])};
@@ -672,7 +413,7 @@ sub Egbk::split(;$$$) {
 
         # count of substrings in scalar context
         else {
-            carp "$0: Use of implicit split to \@_ is deprecated" if $^W;
+            carp "Use of implicit split to \@_ is deprecated" if $^W;
             @_ = @split;
             return scalar @_;
         }
@@ -702,8 +443,8 @@ sub Egbk::split(;$$$) {
                 # (and so on)
 
                 local $@;
-                for (my $digit=1; eval "defined(\$$digit)"; $digit++) {
-                    push @split, eval '$' . $digit;
+                for (my $digit=1; $digit <= 1; $digit++) {
+                    push @split, eval('$' . $digit);
                 }
             }
         }
@@ -714,19 +455,21 @@ sub Egbk::split(;$$$) {
         # (and so on)
 
         elsif ('' =~ m/ \A $pattern \z /xms) {
+            my $last_subexpression_offsets = _last_subexpression_offsets($pattern);
             while ($string =~ s/\A((?:$q_char)+?)$pattern//m) {
                 local $@;
-                for (my $digit=1; eval "defined(\$$digit)"; $digit++) {
-                    push @split, eval '$' . $digit;
+                for (my $digit=1; $digit <= ($last_subexpression_offsets + 1); $digit++) {
+                    push @split, eval('$' . $digit);
                 }
             }
         }
 
         else {
+            my $last_subexpression_offsets = _last_subexpression_offsets($pattern);
             while ($string =~ s/\A((?:$q_char)*?)$pattern//m) {
                 local $@;
-                for (my $digit=1; eval "defined(\$$digit)"; $digit++) {
-                    push @split, eval '$' . $digit;
+                for (my $digit=1; $digit <= ($last_subexpression_offsets + 1); $digit++) {
+                    push @split, eval('$' . $digit);
                 }
             }
         }
@@ -738,28 +481,30 @@ sub Egbk::split(;$$$) {
             while ((--$limit > 0) and (CORE::length($string) > 0)) {
                 if ($string =~ s/\A((?:$q_char)*?)\s+//m) {
                     local $@;
-                    for (my $digit=1; eval "defined(\$$digit)"; $digit++) {
-                        push @split, eval '$' . $digit;
+                    for (my $digit=1; $digit <= 1; $digit++) {
+                        push @split, eval('$' . $digit);
                     }
                 }
             }
         }
         elsif ('' =~ m/ \A $pattern \z /xms) {
+            my $last_subexpression_offsets = _last_subexpression_offsets($pattern);
             while ((--$limit > 0) and (CORE::length($string) > 0)) {
                 if ($string =~ s/\A((?:$q_char)+?)$pattern//m) {
                     local $@;
-                    for (my $digit=1; eval "defined(\$$digit)"; $digit++) {
-                        push @split, eval '$' . $digit;
+                    for (my $digit=1; $digit <= ($last_subexpression_offsets + 1); $digit++) {
+                        push @split, eval('$' . $digit);
                     }
                 }
             }
         }
         else {
+            my $last_subexpression_offsets = _last_subexpression_offsets($pattern);
             while ((--$limit > 0) and (CORE::length($string) > 0)) {
                 if ($string =~ s/\A((?:$q_char)*?)$pattern//m) {
                     local $@;
-                    for (my $digit=1; eval "defined(\$$digit)"; $digit++) {
-                        push @split, eval '$' . $digit;
+                    for (my $digit=1; $digit <= ($last_subexpression_offsets + 1); $digit++) {
+                        push @split, eval('$' . $digit);
                     }
                 }
             }
@@ -782,10 +527,50 @@ sub Egbk::split(;$$$) {
 
     # count of substrings in scalar context
     else {
-        carp "$0: Use of implicit split to \@_ is deprecated" if $^W;
+        carp "Use of implicit split to \@_ is deprecated" if $^W;
         @_ = @split;
         return scalar @_;
     }
+}
+
+#
+# get last subexpression offsets
+#
+sub _last_subexpression_offsets {
+    my $pattern = $_[0];
+
+    # remove comment
+    $pattern =~ s/\(\?\# .*? \)//oxmsg;
+
+    my $modifier = '';
+    if ($pattern =~ m/\(\?\^? ([\-A-Za-z]+) :/oxms) {
+        $modifier = $1;
+        $modifier =~ s/-[A-Za-z]*//;
+    }
+
+    # with /x modifier
+    my @char = ();
+    if ($modifier =~ m/x/oxms) {
+        @char = $pattern =~ m{\G(
+            \\ (?:$q_char)                  |
+            \# (?:$q_char)*? $              |
+            \[ (?: \\\] | (?:$q_char))+? \] |
+            \(\?                            |
+            (?:$q_char)
+        )}oxmsg;
+    }
+
+    # without /x modifier
+    else {
+        @char = $pattern =~ m{\G(
+            \\ (?:$q_char)                  |
+            \[ (?: \\\] | (?:$q_char))+? \] |
+            \(\?                            |
+            (?:$q_char)
+        )}oxmsg;
+    }
+
+    return scalar grep { $_ eq '(' } @char;
 }
 
 #
@@ -800,7 +585,7 @@ sub Egbk::tr($$$$;$) {
 
     if ($modifier =~ m/r/oxms) {
         if ($bind_operator =~ m/ !~ /oxms) {
-            croak "$0: Using !~ with tr///r doesn't make sense";
+            croak "Using !~ with tr///r doesn't make sense";
         }
     }
 
@@ -950,1451 +735,131 @@ sub Egbk::rindex($$;$) {
 }
 
 #
-# GBK lower case
+# GBK lower case first with parameter
 #
-{
-    # P.132 4.8.2. Lexically Scoped Variables: my
-    # in Chapter 4: Statements and Declarations
-    # of ISBN 0-596-00027-8 Programming Perl Third Edition.
-
-    # P.159 Lexically Scoped Variables: my
-    # in Chapter 4: Statements and Declarations
-    # of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
-
-    # (and so on)
-
-    my %lc = ();
-    @lc{qw(A B C D E F G H I J K L M N O P Q R S T U V W X Y Z)} =
-        qw(a b c d e f g h i j k l m n o p q r s t u v w x y z);
-
-    if (0) {
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Eusascii \z/oxms) {
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Elatin1 \z/oxms) {
-        %lc = (%lc,
-            "\xC0" => "\xE0", # LATIN LETTER A WITH GRAVE
-            "\xC1" => "\xE1", # LATIN LETTER A WITH ACUTE
-            "\xC2" => "\xE2", # LATIN LETTER A WITH CIRCUMFLEX
-            "\xC3" => "\xE3", # LATIN LETTER A WITH TILDE
-            "\xC4" => "\xE4", # LATIN LETTER A WITH DIAERESIS
-            "\xC5" => "\xE5", # LATIN LETTER A WITH RING ABOVE
-            "\xC6" => "\xE6", # LATIN LETTER AE
-            "\xC7" => "\xE7", # LATIN LETTER C WITH CEDILLA
-            "\xC8" => "\xE8", # LATIN LETTER E WITH GRAVE
-            "\xC9" => "\xE9", # LATIN LETTER E WITH ACUTE
-            "\xCA" => "\xEA", # LATIN LETTER E WITH CIRCUMFLEX
-            "\xCB" => "\xEB", # LATIN LETTER E WITH DIAERESIS
-            "\xCC" => "\xEC", # LATIN LETTER I WITH GRAVE
-            "\xCD" => "\xED", # LATIN LETTER I WITH ACUTE
-            "\xCE" => "\xEE", # LATIN LETTER I WITH CIRCUMFLEX
-            "\xCF" => "\xEF", # LATIN LETTER I WITH DIAERESIS
-            "\xD0" => "\xF0", # LATIN LETTER ETH (Icelandic)
-            "\xD1" => "\xF1", # LATIN LETTER N WITH TILDE
-            "\xD2" => "\xF2", # LATIN LETTER O WITH GRAVE
-            "\xD3" => "\xF3", # LATIN LETTER O WITH ACUTE
-            "\xD4" => "\xF4", # LATIN LETTER O WITH CIRCUMFLEX
-            "\xD5" => "\xF5", # LATIN LETTER O WITH TILDE
-            "\xD6" => "\xF6", # LATIN LETTER O WITH DIAERESIS
-            "\xD8" => "\xF8", # LATIN LETTER O WITH STROKE
-            "\xD9" => "\xF9", # LATIN LETTER U WITH GRAVE
-            "\xDA" => "\xFA", # LATIN LETTER U WITH ACUTE
-            "\xDB" => "\xFB", # LATIN LETTER U WITH CIRCUMFLEX
-            "\xDC" => "\xFC", # LATIN LETTER U WITH DIAERESIS
-            "\xDD" => "\xFD", # LATIN LETTER Y WITH ACUTE
-            "\xDE" => "\xFE", # LATIN LETTER THORN (Icelandic)
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Elatin2 \z/oxms) {
-        %lc = (%lc,
-            "\xA1" => "\xB1", # LATIN LETTER A WITH OGONEK
-            "\xA3" => "\xB3", # LATIN LETTER L WITH STROKE
-            "\xA5" => "\xB5", # LATIN LETTER L WITH CARON
-            "\xA6" => "\xB6", # LATIN LETTER S WITH ACUTE
-            "\xA9" => "\xB9", # LATIN LETTER S WITH CARON
-            "\xAA" => "\xBA", # LATIN LETTER S WITH CEDILLA
-            "\xAB" => "\xBB", # LATIN LETTER T WITH CARON
-            "\xAC" => "\xBC", # LATIN LETTER Z WITH ACUTE
-            "\xAE" => "\xBE", # LATIN LETTER Z WITH CARON
-            "\xAF" => "\xBF", # LATIN LETTER Z WITH DOT ABOVE
-            "\xC0" => "\xE0", # LATIN LETTER R WITH ACUTE
-            "\xC1" => "\xE1", # LATIN LETTER A WITH ACUTE
-            "\xC2" => "\xE2", # LATIN LETTER A WITH CIRCUMFLEX
-            "\xC3" => "\xE3", # LATIN LETTER A WITH BREVE
-            "\xC4" => "\xE4", # LATIN LETTER A WITH DIAERESIS
-            "\xC5" => "\xE5", # LATIN LETTER L WITH ACUTE
-            "\xC6" => "\xE6", # LATIN LETTER C WITH ACUTE
-            "\xC7" => "\xE7", # LATIN LETTER C WITH CEDILLA
-            "\xC8" => "\xE8", # LATIN LETTER C WITH CARON
-            "\xC9" => "\xE9", # LATIN LETTER E WITH ACUTE
-            "\xCA" => "\xEA", # LATIN LETTER E WITH OGONEK
-            "\xCB" => "\xEB", # LATIN LETTER E WITH DIAERESIS
-            "\xCC" => "\xEC", # LATIN LETTER E WITH CARON
-            "\xCD" => "\xED", # LATIN LETTER I WITH ACUTE
-            "\xCE" => "\xEE", # LATIN LETTER I WITH CIRCUMFLEX
-            "\xCF" => "\xEF", # LATIN LETTER D WITH CARON
-            "\xD0" => "\xF0", # LATIN LETTER D WITH STROKE
-            "\xD1" => "\xF1", # LATIN LETTER N WITH ACUTE
-            "\xD2" => "\xF2", # LATIN LETTER N WITH CARON
-            "\xD3" => "\xF3", # LATIN LETTER O WITH ACUTE
-            "\xD4" => "\xF4", # LATIN LETTER O WITH CIRCUMFLEX
-            "\xD5" => "\xF5", # LATIN LETTER O WITH DOUBLE ACUTE
-            "\xD6" => "\xF6", # LATIN LETTER O WITH DIAERESIS
-            "\xD8" => "\xF8", # LATIN LETTER R WITH CARON
-            "\xD9" => "\xF9", # LATIN LETTER U WITH RING ABOVE
-            "\xDA" => "\xFA", # LATIN LETTER U WITH ACUTE
-            "\xDB" => "\xFB", # LATIN LETTER U WITH DOUBLE ACUTE
-            "\xDC" => "\xFC", # LATIN LETTER U WITH DIAERESIS
-            "\xDD" => "\xFD", # LATIN LETTER Y WITH ACUTE
-            "\xDE" => "\xFE", # LATIN LETTER T WITH CEDILLA
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Elatin3 \z/oxms) {
-        %lc = (%lc,
-            "\xA1" => "\xB1", # LATIN LETTER H WITH STROKE
-            "\xA6" => "\xB6", # LATIN LETTER H WITH CIRCUMFLEX
-            "\xAA" => "\xBA", # LATIN LETTER S WITH CEDILLA
-            "\xAB" => "\xBB", # LATIN LETTER G WITH BREVE
-            "\xAC" => "\xBC", # LATIN LETTER J WITH CIRCUMFLEX
-            "\xAF" => "\xBF", # LATIN LETTER Z WITH DOT ABOVE
-            "\xC0" => "\xE0", # LATIN LETTER A WITH GRAVE
-            "\xC1" => "\xE1", # LATIN LETTER A WITH ACUTE
-            "\xC2" => "\xE2", # LATIN LETTER A WITH CIRCUMFLEX
-            "\xC4" => "\xE4", # LATIN LETTER A WITH DIAERESIS
-            "\xC5" => "\xE5", # LATIN LETTER C WITH DOT ABOVE
-            "\xC6" => "\xE6", # LATIN LETTER C WITH CIRCUMFLEX
-            "\xC7" => "\xE7", # LATIN LETTER C WITH CEDILLA
-            "\xC8" => "\xE8", # LATIN LETTER E WITH GRAVE
-            "\xC9" => "\xE9", # LATIN LETTER E WITH ACUTE
-            "\xCA" => "\xEA", # LATIN LETTER E WITH CIRCUMFLEX
-            "\xCB" => "\xEB", # LATIN LETTER E WITH DIAERESIS
-            "\xCC" => "\xEC", # LATIN LETTER I WITH GRAVE
-            "\xCD" => "\xED", # LATIN LETTER I WITH ACUTE
-            "\xCE" => "\xEE", # LATIN LETTER I WITH CIRCUMFLEX
-            "\xCF" => "\xEF", # LATIN LETTER I WITH DIAERESIS
-            "\xD1" => "\xF1", # LATIN LETTER N WITH TILDE
-            "\xD2" => "\xF2", # LATIN LETTER O WITH GRAVE
-            "\xD3" => "\xF3", # LATIN LETTER O WITH ACUTE
-            "\xD4" => "\xF4", # LATIN LETTER O WITH CIRCUMFLEX
-            "\xD5" => "\xF5", # LATIN LETTER G WITH DOT ABOVE
-            "\xD6" => "\xF6", # LATIN LETTER O WITH DIAERESIS
-            "\xD8" => "\xF8", # LATIN LETTER G WITH CIRCUMFLEX
-            "\xD9" => "\xF9", # LATIN LETTER U WITH GRAVE
-            "\xDA" => "\xFA", # LATIN LETTER U WITH ACUTE
-            "\xDB" => "\xFB", # LATIN LETTER U WITH CIRCUMFLEX
-            "\xDC" => "\xFC", # LATIN LETTER U WITH DIAERESIS
-            "\xDD" => "\xFD", # LATIN LETTER U WITH BREVE
-            "\xDE" => "\xFE", # LATIN LETTER S WITH CIRCUMFLEX
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Elatin4 \z/oxms) {
-        %lc = (%lc,
-            "\xA1" => "\xB1", # LATIN LETTER A WITH OGONEK
-            "\xA3" => "\xB3", # LATIN LETTER R WITH CEDILLA
-            "\xA5" => "\xB5", # LATIN LETTER I WITH TILDE
-            "\xA6" => "\xB6", # LATIN LETTER L WITH CEDILLA
-            "\xA9" => "\xB9", # LATIN LETTER S WITH CARON
-            "\xAA" => "\xBA", # LATIN LETTER E WITH MACRON
-            "\xAB" => "\xBB", # LATIN LETTER G WITH CEDILLA
-            "\xAC" => "\xBC", # LATIN LETTER T WITH STROKE
-            "\xAE" => "\xBE", # LATIN LETTER Z WITH CARON
-            "\xBD" => "\xBF", # LATIN LETTER ENG
-            "\xC0" => "\xE0", # LATIN LETTER A WITH MACRON
-            "\xC1" => "\xE1", # LATIN LETTER A WITH ACUTE
-            "\xC2" => "\xE2", # LATIN LETTER A WITH CIRCUMFLEX
-            "\xC3" => "\xE3", # LATIN LETTER A WITH TILDE
-            "\xC4" => "\xE4", # LATIN LETTER A WITH DIAERESIS
-            "\xC5" => "\xE5", # LATIN LETTER A WITH RING ABOVE
-            "\xC6" => "\xE6", # LATIN LETTER AE
-            "\xC7" => "\xE7", # LATIN LETTER I WITH OGONEK
-            "\xC8" => "\xE8", # LATIN LETTER C WITH CARON
-            "\xC9" => "\xE9", # LATIN LETTER E WITH ACUTE
-            "\xCA" => "\xEA", # LATIN LETTER E WITH OGONEK
-            "\xCB" => "\xEB", # LATIN LETTER E WITH DIAERESIS
-            "\xCC" => "\xEC", # LATIN LETTER E WITH DOT ABOVE
-            "\xCD" => "\xED", # LATIN LETTER I WITH ACUTE
-            "\xCE" => "\xEE", # LATIN LETTER I WITH CIRCUMFLEX
-            "\xCF" => "\xEF", # LATIN LETTER I WITH MACRON
-            "\xD0" => "\xF0", # LATIN LETTER D WITH STROKE
-            "\xD1" => "\xF1", # LATIN LETTER N WITH CEDILLA
-            "\xD2" => "\xF2", # LATIN LETTER O WITH MACRON
-            "\xD3" => "\xF3", # LATIN LETTER K WITH CEDILLA
-            "\xD4" => "\xF4", # LATIN LETTER O WITH CIRCUMFLEX
-            "\xD5" => "\xF5", # LATIN LETTER O WITH TILDE
-            "\xD6" => "\xF6", # LATIN LETTER O WITH DIAERESIS
-            "\xD8" => "\xF8", # LATIN LETTER O WITH STROKE
-            "\xD9" => "\xF9", # LATIN LETTER U WITH OGONEK
-            "\xDA" => "\xFA", # LATIN LETTER U WITH ACUTE
-            "\xDB" => "\xFB", # LATIN LETTER U WITH CIRCUMFLEX
-            "\xDC" => "\xFC", # LATIN LETTER U WITH DIAERESIS
-            "\xDD" => "\xFD", # LATIN LETTER U WITH TILDE
-            "\xDE" => "\xFE", # LATIN LETTER U WITH MACRON
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Ecyrillic \z/oxms) {
-        %lc = (%lc,
-            "\xA1" => "\xF1", # CYRILLIC LETTER IO
-            "\xA2" => "\xF2", # CYRILLIC LETTER DJE
-            "\xA3" => "\xF3", # CYRILLIC LETTER GJE
-            "\xA4" => "\xF4", # CYRILLIC LETTER UKRAINIAN IE
-            "\xA5" => "\xF5", # CYRILLIC LETTER DZE
-            "\xA6" => "\xF6", # CYRILLIC LETTER BYELORUSSIAN-UKRAINIAN I
-            "\xA7" => "\xF7", # CYRILLIC LETTER YI
-            "\xA8" => "\xF8", # CYRILLIC LETTER JE
-            "\xA9" => "\xF9", # CYRILLIC LETTER LJE
-            "\xAA" => "\xFA", # CYRILLIC LETTER NJE
-            "\xAB" => "\xFB", # CYRILLIC LETTER TSHE
-            "\xAC" => "\xFC", # CYRILLIC LETTER KJE
-            "\xAE" => "\xFE", # CYRILLIC LETTER SHORT U
-            "\xAF" => "\xFF", # CYRILLIC LETTER DZHE
-            "\xB0" => "\xD0", # CYRILLIC LETTER A
-            "\xB1" => "\xD1", # CYRILLIC LETTER BE
-            "\xB2" => "\xD2", # CYRILLIC LETTER VE
-            "\xB3" => "\xD3", # CYRILLIC LETTER GHE
-            "\xB4" => "\xD4", # CYRILLIC LETTER DE
-            "\xB5" => "\xD5", # CYRILLIC LETTER IE
-            "\xB6" => "\xD6", # CYRILLIC LETTER ZHE
-            "\xB7" => "\xD7", # CYRILLIC LETTER ZE
-            "\xB8" => "\xD8", # CYRILLIC LETTER I
-            "\xB9" => "\xD9", # CYRILLIC LETTER SHORT I
-            "\xBA" => "\xDA", # CYRILLIC LETTER KA
-            "\xBB" => "\xDB", # CYRILLIC LETTER EL
-            "\xBC" => "\xDC", # CYRILLIC LETTER EM
-            "\xBD" => "\xDD", # CYRILLIC LETTER EN
-            "\xBE" => "\xDE", # CYRILLIC LETTER O
-            "\xBF" => "\xDF", # CYRILLIC LETTER PE
-            "\xC0" => "\xE0", # CYRILLIC LETTER ER
-            "\xC1" => "\xE1", # CYRILLIC LETTER ES
-            "\xC2" => "\xE2", # CYRILLIC LETTER TE
-            "\xC3" => "\xE3", # CYRILLIC LETTER U
-            "\xC4" => "\xE4", # CYRILLIC LETTER EF
-            "\xC5" => "\xE5", # CYRILLIC LETTER HA
-            "\xC6" => "\xE6", # CYRILLIC LETTER TSE
-            "\xC7" => "\xE7", # CYRILLIC LETTER CHE
-            "\xC8" => "\xE8", # CYRILLIC LETTER SHA
-            "\xC9" => "\xE9", # CYRILLIC LETTER SHCHA
-            "\xCA" => "\xEA", # CYRILLIC LETTER HARD SIGN
-            "\xCB" => "\xEB", # CYRILLIC LETTER YERU
-            "\xCC" => "\xEC", # CYRILLIC LETTER SOFT SIGN
-            "\xCD" => "\xED", # CYRILLIC LETTER E
-            "\xCE" => "\xEE", # CYRILLIC LETTER YU
-            "\xCF" => "\xEF", # CYRILLIC LETTER YA
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Ekoi8r \z/oxms) {
-        %lc = (%lc,
-            "\xB3" => "\xA3", # CYRILLIC LETTER IO
-            "\xE0" => "\xC0", # CYRILLIC LETTER IU
-            "\xE1" => "\xC1", # CYRILLIC LETTER A
-            "\xE2" => "\xC2", # CYRILLIC LETTER BE
-            "\xE3" => "\xC3", # CYRILLIC LETTER TSE
-            "\xE4" => "\xC4", # CYRILLIC LETTER DE
-            "\xE5" => "\xC5", # CYRILLIC LETTER IE
-            "\xE6" => "\xC6", # CYRILLIC LETTER EF
-            "\xE7" => "\xC7", # CYRILLIC LETTER GE
-            "\xE8" => "\xC8", # CYRILLIC LETTER KHA
-            "\xE9" => "\xC9", # CYRILLIC LETTER II
-            "\xEA" => "\xCA", # CYRILLIC LETTER SHORT II
-            "\xEB" => "\xCB", # CYRILLIC LETTER KA
-            "\xEC" => "\xCC", # CYRILLIC LETTER EL
-            "\xED" => "\xCD", # CYRILLIC LETTER EM
-            "\xEE" => "\xCE", # CYRILLIC LETTER EN
-            "\xEF" => "\xCF", # CYRILLIC LETTER O
-            "\xF0" => "\xD0", # CYRILLIC LETTER PE
-            "\xF1" => "\xD1", # CYRILLIC LETTER IA
-            "\xF2" => "\xD2", # CYRILLIC LETTER ER
-            "\xF3" => "\xD3", # CYRILLIC LETTER ES
-            "\xF4" => "\xD4", # CYRILLIC LETTER TE
-            "\xF5" => "\xD5", # CYRILLIC LETTER U
-            "\xF6" => "\xD6", # CYRILLIC LETTER ZHE
-            "\xF7" => "\xD7", # CYRILLIC LETTER VE
-            "\xF8" => "\xD8", # CYRILLIC LETTER SOFT SIGN
-            "\xF9" => "\xD9", # CYRILLIC LETTER YERI
-            "\xFA" => "\xDA", # CYRILLIC LETTER ZE
-            "\xFB" => "\xDB", # CYRILLIC LETTER SHA
-            "\xFC" => "\xDC", # CYRILLIC LETTER REVERSED E
-            "\xFD" => "\xDD", # CYRILLIC LETTER SHCHA
-            "\xFE" => "\xDE", # CYRILLIC LETTER CHE
-            "\xFF" => "\xDF", # CYRILLIC LETTER HARD SIGN
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Ekoi8u \z/oxms) {
-        %lc = (%lc,
-            "\xB3" => "\xA3", # CYRILLIC LETTER IO
-            "\xB4" => "\xA4", # CYRILLIC LETTER UKRAINIAN IE
-            "\xB6" => "\xA6", # CYRILLIC LETTER BYELORUSSIAN-UKRAINIAN I
-            "\xB7" => "\xA7", # CYRILLIC LETTER YI (UKRAINIAN)
-            "\xBD" => "\xAD", # CYRILLIC LETTER GHE WITH UPTURN
-            "\xE0" => "\xC0", # CYRILLIC LETTER YU
-            "\xE1" => "\xC1", # CYRILLIC LETTER A
-            "\xE2" => "\xC2", # CYRILLIC LETTER BE
-            "\xE3" => "\xC3", # CYRILLIC LETTER TSE
-            "\xE4" => "\xC4", # CYRILLIC LETTER DE
-            "\xE5" => "\xC5", # CYRILLIC LETTER IE
-            "\xE6" => "\xC6", # CYRILLIC LETTER EF
-            "\xE7" => "\xC7", # CYRILLIC LETTER GHE
-            "\xE8" => "\xC8", # CYRILLIC LETTER KHA
-            "\xE9" => "\xC9", # CYRILLIC LETTER I
-            "\xEA" => "\xCA", # CYRILLIC LETTER SHORT I
-            "\xEB" => "\xCB", # CYRILLIC LETTER KA
-            "\xEC" => "\xCC", # CYRILLIC LETTER EL
-            "\xED" => "\xCD", # CYRILLIC LETTER EM
-            "\xEE" => "\xCE", # CYRILLIC LETTER EN
-            "\xEF" => "\xCF", # CYRILLIC LETTER O
-            "\xF0" => "\xD0", # CYRILLIC LETTER PE
-            "\xF1" => "\xD1", # CYRILLIC LETTER YA
-            "\xF2" => "\xD2", # CYRILLIC LETTER ER
-            "\xF3" => "\xD3", # CYRILLIC LETTER ES
-            "\xF4" => "\xD4", # CYRILLIC LETTER TE
-            "\xF5" => "\xD5", # CYRILLIC LETTER U
-            "\xF6" => "\xD6", # CYRILLIC LETTER ZHE
-            "\xF7" => "\xD7", # CYRILLIC LETTER VE
-            "\xF8" => "\xD8", # CYRILLIC LETTER SOFT SIGN
-            "\xF9" => "\xD9", # CYRILLIC LETTER YERU
-            "\xFA" => "\xDA", # CYRILLIC LETTER ZE
-            "\xFB" => "\xDB", # CYRILLIC LETTER SHA
-            "\xFC" => "\xDC", # CYRILLIC LETTER E
-            "\xFD" => "\xDD", # CYRILLIC LETTER SHCHA
-            "\xFE" => "\xDE", # CYRILLIC LETTER CHE
-            "\xFF" => "\xDF", # CYRILLIC LETTER HARD SIGN
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Egreek \z/oxms) {
-        %lc = (%lc,
-            "\xB6" => "\xDC", # GREEK LETTER ALPHA WITH TONOS
-            "\xB8" => "\xDD", # GREEK LETTER EPSILON WITH TONOS
-            "\xB9" => "\xDE", # GREEK LETTER ETA WITH TONOS
-            "\xBA" => "\xDF", # GREEK LETTER IOTA WITH TONOS
-            "\xBC" => "\xFC", # GREEK LETTER OMICRON WITH TONOS
-            "\xBE" => "\xFD", # GREEK LETTER UPSILON WITH TONOS
-            "\xBF" => "\xFE", # GREEK LETTER OMEGA WITH TONOS
-            "\xC1" => "\xE1", # GREEK LETTER ALPHA
-            "\xC2" => "\xE2", # GREEK LETTER BETA
-            "\xC3" => "\xE3", # GREEK LETTER GAMMA
-            "\xC4" => "\xE4", # GREEK LETTER DELTA
-            "\xC5" => "\xE5", # GREEK LETTER EPSILON
-            "\xC6" => "\xE6", # GREEK LETTER ZETA
-            "\xC7" => "\xE7", # GREEK LETTER ETA
-            "\xC8" => "\xE8", # GREEK LETTER THETA
-            "\xC9" => "\xE9", # GREEK LETTER IOTA
-            "\xCA" => "\xEA", # GREEK LETTER KAPPA
-            "\xCB" => "\xEB", # GREEK LETTER LAMDA
-            "\xCC" => "\xEC", # GREEK LETTER MU
-            "\xCD" => "\xED", # GREEK LETTER NU
-            "\xCE" => "\xEE", # GREEK LETTER XI
-            "\xCF" => "\xEF", # GREEK LETTER OMICRON
-            "\xD0" => "\xF0", # GREEK LETTER PI
-            "\xD1" => "\xF1", # GREEK LETTER RHO
-            "\xD3" => "\xF3", # GREEK LETTER SIGMA
-            "\xD4" => "\xF4", # GREEK LETTER TAU
-            "\xD5" => "\xF5", # GREEK LETTER UPSILON
-            "\xD6" => "\xF6", # GREEK LETTER PHI
-            "\xD7" => "\xF7", # GREEK LETTER CHI
-            "\xD8" => "\xF8", # GREEK LETTER PSI
-            "\xD9" => "\xF9", # GREEK LETTER OMEGA
-            "\xDA" => "\xFA", # GREEK LETTER IOTA WITH DIALYTIKA
-            "\xDB" => "\xFB", # GREEK LETTER UPSILON WITH DIALYTIKA
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Elatin5 \z/oxms) {
-        %lc = (%lc,
-            "\xC0" => "\xE0", # LATIN LETTER A WITH GRAVE
-            "\xC1" => "\xE1", # LATIN LETTER A WITH ACUTE
-            "\xC2" => "\xE2", # LATIN LETTER A WITH CIRCUMFLEX
-            "\xC3" => "\xE3", # LATIN LETTER A WITH TILDE
-            "\xC4" => "\xE4", # LATIN LETTER A WITH DIAERESIS
-            "\xC5" => "\xE5", # LATIN LETTER A WITH RING ABOVE
-            "\xC6" => "\xE6", # LATIN LETTER AE
-            "\xC7" => "\xE7", # LATIN LETTER C WITH CEDILLA
-            "\xC8" => "\xE8", # LATIN LETTER E WITH GRAVE
-            "\xC9" => "\xE9", # LATIN LETTER E WITH ACUTE
-            "\xCA" => "\xEA", # LATIN LETTER E WITH CIRCUMFLEX
-            "\xCB" => "\xEB", # LATIN LETTER E WITH DIAERESIS
-            "\xCC" => "\xEC", # LATIN LETTER I WITH GRAVE
-            "\xCD" => "\xED", # LATIN LETTER I WITH ACUTE
-            "\xCE" => "\xEE", # LATIN LETTER I WITH CIRCUMFLEX
-            "\xCF" => "\xEF", # LATIN LETTER I WITH DIAERESIS
-            "\xD0" => "\xF0", # LATIN LETTER G WITH BREVE
-            "\xD1" => "\xF1", # LATIN LETTER N WITH TILDE
-            "\xD2" => "\xF2", # LATIN LETTER O WITH GRAVE
-            "\xD3" => "\xF3", # LATIN LETTER O WITH ACUTE
-            "\xD4" => "\xF4", # LATIN LETTER O WITH CIRCUMFLEX
-            "\xD5" => "\xF5", # LATIN LETTER O WITH TILDE
-            "\xD6" => "\xF6", # LATIN LETTER O WITH DIAERESIS
-            "\xD8" => "\xF8", # LATIN LETTER O WITH STROKE
-            "\xD9" => "\xF9", # LATIN LETTER U WITH GRAVE
-            "\xDA" => "\xFA", # LATIN LETTER U WITH ACUTE
-            "\xDB" => "\xFB", # LATIN LETTER U WITH CIRCUMFLEX
-            "\xDC" => "\xFC", # LATIN LETTER U WITH DIAERESIS
-            "\xDE" => "\xFE", # LATIN LETTER S WITH CEDILLA
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Elatin6 \z/oxms) {
-        %lc = (%lc,
-            "\xA1" => "\xB1", # LATIN LETTER A WITH OGONEK
-            "\xA2" => "\xB2", # LATIN LETTER E WITH MACRON
-            "\xA3" => "\xB3", # LATIN LETTER G WITH CEDILLA
-            "\xA4" => "\xB4", # LATIN LETTER I WITH MACRON
-            "\xA5" => "\xB5", # LATIN LETTER I WITH TILDE
-            "\xA6" => "\xB6", # LATIN LETTER K WITH CEDILLA
-            "\xA8" => "\xB8", # LATIN LETTER L WITH CEDILLA
-            "\xA9" => "\xB9", # LATIN LETTER D WITH STROKE
-            "\xAA" => "\xBA", # LATIN LETTER S WITH CARON
-            "\xAB" => "\xBB", # LATIN LETTER T WITH STROKE
-            "\xAC" => "\xBC", # LATIN LETTER Z WITH CARON
-            "\xAE" => "\xBE", # LATIN LETTER U WITH MACRON
-            "\xAF" => "\xBF", # LATIN LETTER ENG
-            "\xC0" => "\xE0", # LATIN LETTER A WITH MACRON
-            "\xC1" => "\xE1", # LATIN LETTER A WITH ACUTE
-            "\xC2" => "\xE2", # LATIN LETTER A WITH CIRCUMFLEX
-            "\xC3" => "\xE3", # LATIN LETTER A WITH TILDE
-            "\xC4" => "\xE4", # LATIN LETTER A WITH DIAERESIS
-            "\xC5" => "\xE5", # LATIN LETTER A WITH RING ABOVE
-            "\xC6" => "\xE6", # LATIN LETTER AE
-            "\xC7" => "\xE7", # LATIN LETTER I WITH OGONEK
-            "\xC8" => "\xE8", # LATIN LETTER C WITH CARON
-            "\xC9" => "\xE9", # LATIN LETTER E WITH ACUTE
-            "\xCA" => "\xEA", # LATIN LETTER E WITH OGONEK
-            "\xCB" => "\xEB", # LATIN LETTER E WITH DIAERESIS
-            "\xCC" => "\xEC", # LATIN LETTER E WITH DOT ABOVE
-            "\xCD" => "\xED", # LATIN LETTER I WITH ACUTE
-            "\xCE" => "\xEE", # LATIN LETTER I WITH CIRCUMFLEX
-            "\xCF" => "\xEF", # LATIN LETTER I WITH DIAERESIS
-            "\xD0" => "\xF0", # LATIN LETTER ETH (Icelandic)
-            "\xD1" => "\xF1", # LATIN LETTER N WITH CEDILLA
-            "\xD2" => "\xF2", # LATIN LETTER O WITH MACRON
-            "\xD3" => "\xF3", # LATIN LETTER O WITH ACUTE
-            "\xD4" => "\xF4", # LATIN LETTER O WITH CIRCUMFLEX
-            "\xD5" => "\xF5", # LATIN LETTER O WITH TILDE
-            "\xD6" => "\xF6", # LATIN LETTER O WITH DIAERESIS
-            "\xD7" => "\xF7", # LATIN LETTER U WITH TILDE
-            "\xD8" => "\xF8", # LATIN LETTER O WITH STROKE
-            "\xD9" => "\xF9", # LATIN LETTER U WITH OGONEK
-            "\xDA" => "\xFA", # LATIN LETTER U WITH ACUTE
-            "\xDB" => "\xFB", # LATIN LETTER U WITH CIRCUMFLEX
-            "\xDC" => "\xFC", # LATIN LETTER U WITH DIAERESIS
-            "\xDD" => "\xFD", # LATIN LETTER Y WITH ACUTE
-            "\xDE" => "\xFE", # LATIN LETTER THORN (Icelandic)
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Elatin7 \z/oxms) {
-        %lc = (%lc,
-            "\xA8" => "\xB8", # LATIN LETTER O WITH STROKE
-            "\xAA" => "\xBA", # LATIN LETTER R WITH CEDILLA
-            "\xAF" => "\xBF", # LATIN LETTER AE
-            "\xC0" => "\xE0", # LATIN LETTER A WITH OGONEK
-            "\xC1" => "\xE1", # LATIN LETTER I WITH OGONEK
-            "\xC2" => "\xE2", # LATIN LETTER A WITH MACRON
-            "\xC3" => "\xE3", # LATIN LETTER C WITH ACUTE
-            "\xC4" => "\xE4", # LATIN LETTER A WITH DIAERESIS
-            "\xC5" => "\xE5", # LATIN LETTER A WITH RING ABOVE
-            "\xC6" => "\xE6", # LATIN LETTER E WITH OGONEK
-            "\xC7" => "\xE7", # LATIN LETTER E WITH MACRON
-            "\xC8" => "\xE8", # LATIN LETTER C WITH CARON
-            "\xC9" => "\xE9", # LATIN LETTER E WITH ACUTE
-            "\xCA" => "\xEA", # LATIN LETTER Z WITH ACUTE
-            "\xCB" => "\xEB", # LATIN LETTER E WITH DOT ABOVE
-            "\xCC" => "\xEC", # LATIN LETTER G WITH CEDILLA
-            "\xCD" => "\xED", # LATIN LETTER K WITH CEDILLA
-            "\xCE" => "\xEE", # LATIN LETTER I WITH MACRON
-            "\xCF" => "\xEF", # LATIN LETTER L WITH CEDILLA
-            "\xD0" => "\xF0", # LATIN LETTER S WITH CARON
-            "\xD1" => "\xF1", # LATIN LETTER N WITH ACUTE
-            "\xD2" => "\xF2", # LATIN LETTER N WITH CEDILLA
-            "\xD3" => "\xF3", # LATIN LETTER O WITH ACUTE
-            "\xD4" => "\xF4", # LATIN LETTER O WITH MACRON
-            "\xD5" => "\xF5", # LATIN LETTER O WITH TILDE
-            "\xD6" => "\xF6", # LATIN LETTER O WITH DIAERESIS
-            "\xD8" => "\xF8", # LATIN LETTER U WITH OGONEK
-            "\xD9" => "\xF9", # LATIN LETTER L WITH STROKE
-            "\xDA" => "\xFA", # LATIN LETTER S WITH ACUTE
-            "\xDB" => "\xFB", # LATIN LETTER U WITH MACRON
-            "\xDC" => "\xFC", # LATIN LETTER U WITH DIAERESIS
-            "\xDD" => "\xFD", # LATIN LETTER Z WITH DOT ABOVE
-            "\xDE" => "\xFE", # LATIN LETTER Z WITH CARON
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Elatin8 \z/oxms) {
-        %lc = (%lc,
-            "\xA1" => "\xA2", # LATIN LETTER B WITH DOT ABOVE
-            "\xA4" => "\xA5", # LATIN LETTER C WITH DOT ABOVE
-            "\xA6" => "\xAB", # LATIN LETTER D WITH DOT ABOVE
-            "\xA8" => "\xB8", # LATIN LETTER W WITH GRAVE
-            "\xAA" => "\xBA", # LATIN LETTER W WITH ACUTE
-            "\xAC" => "\xBC", # LATIN LETTER Y WITH GRAVE
-            "\xAF" => "\xFF", # LATIN LETTER Y WITH DIAERESIS
-            "\xB0" => "\xB1", # LATIN LETTER F WITH DOT ABOVE
-            "\xB2" => "\xB3", # LATIN LETTER G WITH DOT ABOVE
-            "\xB4" => "\xB5", # LATIN LETTER M WITH DOT ABOVE
-            "\xB7" => "\xB9", # LATIN LETTER P WITH DOT ABOVE
-            "\xBB" => "\xBF", # LATIN LETTER S WITH DOT ABOVE
-            "\xBD" => "\xBE", # LATIN LETTER W WITH DIAERESIS
-            "\xC0" => "\xE0", # LATIN LETTER A WITH GRAVE
-            "\xC1" => "\xE1", # LATIN LETTER A WITH ACUTE
-            "\xC2" => "\xE2", # LATIN LETTER A WITH CIRCUMFLEX
-            "\xC3" => "\xE3", # LATIN LETTER A WITH TILDE
-            "\xC4" => "\xE4", # LATIN LETTER A WITH DIAERESIS
-            "\xC5" => "\xE5", # LATIN LETTER A WITH RING ABOVE
-            "\xC6" => "\xE6", # LATIN LETTER AE
-            "\xC7" => "\xE7", # LATIN LETTER C WITH CEDILLA
-            "\xC8" => "\xE8", # LATIN LETTER E WITH GRAVE
-            "\xC9" => "\xE9", # LATIN LETTER E WITH ACUTE
-            "\xCA" => "\xEA", # LATIN LETTER E WITH CIRCUMFLEX
-            "\xCB" => "\xEB", # LATIN LETTER E WITH DIAERESIS
-            "\xCC" => "\xEC", # LATIN LETTER I WITH GRAVE
-            "\xCD" => "\xED", # LATIN LETTER I WITH ACUTE
-            "\xCE" => "\xEE", # LATIN LETTER I WITH CIRCUMFLEX
-            "\xCF" => "\xEF", # LATIN LETTER I WITH DIAERESIS
-            "\xD0" => "\xF0", # LATIN LETTER W WITH CIRCUMFLEX
-            "\xD1" => "\xF1", # LATIN LETTER N WITH TILDE
-            "\xD2" => "\xF2", # LATIN LETTER O WITH GRAVE
-            "\xD3" => "\xF3", # LATIN LETTER O WITH ACUTE
-            "\xD4" => "\xF4", # LATIN LETTER O WITH CIRCUMFLEX
-            "\xD5" => "\xF5", # LATIN LETTER O WITH TILDE
-            "\xD6" => "\xF6", # LATIN LETTER O WITH DIAERESIS
-            "\xD7" => "\xF7", # LATIN LETTER T WITH DOT ABOVE
-            "\xD8" => "\xF8", # LATIN LETTER O WITH STROKE
-            "\xD9" => "\xF9", # LATIN LETTER U WITH GRAVE
-            "\xDA" => "\xFA", # LATIN LETTER U WITH ACUTE
-            "\xDB" => "\xFB", # LATIN LETTER U WITH CIRCUMFLEX
-            "\xDC" => "\xFC", # LATIN LETTER U WITH DIAERESIS
-            "\xDD" => "\xFD", # LATIN LETTER Y WITH ACUTE
-            "\xDE" => "\xFE", # LATIN LETTER Y WITH CIRCUMFLEX
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Elatin9 \z/oxms) {
-        %lc = (%lc,
-            "\xA6" => "\xA8", # LATIN LETTER S WITH CARON
-            "\xB4" => "\xB8", # LATIN LETTER Z WITH CARON
-            "\xBC" => "\xBD", # LATIN LIGATURE OE
-            "\xBE" => "\xFF", # LATIN LETTER Y WITH DIAERESIS
-            "\xC0" => "\xE0", # LATIN LETTER A WITH GRAVE
-            "\xC1" => "\xE1", # LATIN LETTER A WITH ACUTE
-            "\xC2" => "\xE2", # LATIN LETTER A WITH CIRCUMFLEX
-            "\xC3" => "\xE3", # LATIN LETTER A WITH TILDE
-            "\xC4" => "\xE4", # LATIN LETTER A WITH DIAERESIS
-            "\xC5" => "\xE5", # LATIN LETTER A WITH RING ABOVE
-            "\xC6" => "\xE6", # LATIN LETTER AE
-            "\xC7" => "\xE7", # LATIN LETTER C WITH CEDILLA
-            "\xC8" => "\xE8", # LATIN LETTER E WITH GRAVE
-            "\xC9" => "\xE9", # LATIN LETTER E WITH ACUTE
-            "\xCA" => "\xEA", # LATIN LETTER E WITH CIRCUMFLEX
-            "\xCB" => "\xEB", # LATIN LETTER E WITH DIAERESIS
-            "\xCC" => "\xEC", # LATIN LETTER I WITH GRAVE
-            "\xCD" => "\xED", # LATIN LETTER I WITH ACUTE
-            "\xCE" => "\xEE", # LATIN LETTER I WITH CIRCUMFLEX
-            "\xCF" => "\xEF", # LATIN LETTER I WITH DIAERESIS
-            "\xD0" => "\xF0", # LATIN LETTER ETH
-            "\xD1" => "\xF1", # LATIN LETTER N WITH TILDE
-            "\xD2" => "\xF2", # LATIN LETTER O WITH GRAVE
-            "\xD3" => "\xF3", # LATIN LETTER O WITH ACUTE
-            "\xD4" => "\xF4", # LATIN LETTER O WITH CIRCUMFLEX
-            "\xD5" => "\xF5", # LATIN LETTER O WITH TILDE
-            "\xD6" => "\xF6", # LATIN LETTER O WITH DIAERESIS
-            "\xD8" => "\xF8", # LATIN LETTER O WITH STROKE
-            "\xD9" => "\xF9", # LATIN LETTER U WITH GRAVE
-            "\xDA" => "\xFA", # LATIN LETTER U WITH ACUTE
-            "\xDB" => "\xFB", # LATIN LETTER U WITH CIRCUMFLEX
-            "\xDC" => "\xFC", # LATIN LETTER U WITH DIAERESIS
-            "\xDD" => "\xFD", # LATIN LETTER Y WITH ACUTE
-            "\xDE" => "\xFE", # LATIN LETTER THORN
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Elatin10 \z/oxms) {
-        %lc = (%lc,
-            "\xA1" => "\xA2", # LATIN LETTER A WITH OGONEK
-            "\xA3" => "\xB3", # LATIN LETTER L WITH STROKE
-            "\xA6" => "\xA8", # LATIN LETTER S WITH CARON
-            "\xAA" => "\xBA", # LATIN LETTER S WITH COMMA BELOW
-            "\xAC" => "\xAE", # LATIN LETTER Z WITH ACUTE
-            "\xAF" => "\xBF", # LATIN LETTER Z WITH DOT ABOVE
-            "\xB2" => "\xB9", # LATIN LETTER C WITH CARON
-            "\xB4" => "\xB8", # LATIN LETTER Z WITH CARON
-            "\xBC" => "\xBD", # LATIN LIGATURE OE
-            "\xBE" => "\xFF", # LATIN LETTER Y WITH DIAERESIS
-            "\xC0" => "\xE0", # LATIN LETTER A WITH GRAVE
-            "\xC1" => "\xE1", # LATIN LETTER A WITH ACUTE
-            "\xC2" => "\xE2", # LATIN LETTER A WITH CIRCUMFLEX
-            "\xC3" => "\xE3", # LATIN LETTER A WITH BREVE
-            "\xC4" => "\xE4", # LATIN LETTER A WITH DIAERESIS
-            "\xC5" => "\xE5", # LATIN LETTER C WITH ACUTE
-            "\xC6" => "\xE6", # LATIN LETTER AE
-            "\xC7" => "\xE7", # LATIN LETTER C WITH CEDILLA
-            "\xC8" => "\xE8", # LATIN LETTER E WITH GRAVE
-            "\xC9" => "\xE9", # LATIN LETTER E WITH ACUTE
-            "\xCA" => "\xEA", # LATIN LETTER E WITH CIRCUMFLEX
-            "\xCB" => "\xEB", # LATIN LETTER E WITH DIAERESIS
-            "\xCC" => "\xEC", # LATIN LETTER I WITH GRAVE
-            "\xCD" => "\xED", # LATIN LETTER I WITH ACUTE
-            "\xCE" => "\xEE", # LATIN LETTER I WITH CIRCUMFLEX
-            "\xCF" => "\xEF", # LATIN LETTER I WITH DIAERESIS
-            "\xD0" => "\xF0", # LATIN LETTER D WITH STROKE
-            "\xD1" => "\xF1", # LATIN LETTER N WITH ACUTE
-            "\xD2" => "\xF2", # LATIN LETTER O WITH GRAVE
-            "\xD3" => "\xF3", # LATIN LETTER O WITH ACUTE
-            "\xD4" => "\xF4", # LATIN LETTER O WITH CIRCUMFLEX
-            "\xD5" => "\xF5", # LATIN LETTER O WITH DOUBLE ACUTE
-            "\xD6" => "\xF6", # LATIN LETTER O WITH DIAERESIS
-            "\xD7" => "\xF7", # LATIN LETTER S WITH ACUTE
-            "\xD8" => "\xF8", # LATIN LETTER U WITH DOUBLE ACUTE
-            "\xD9" => "\xF9", # LATIN LETTER U WITH GRAVE
-            "\xDA" => "\xFA", # LATIN LETTER U WITH ACUTE
-            "\xDB" => "\xFB", # LATIN LETTER U WITH CIRCUMFLEX
-            "\xDC" => "\xFC", # LATIN LETTER U WITH DIAERESIS
-            "\xDD" => "\xFD", # LATIN LETTER E WITH OGONEK
-            "\xDE" => "\xFE", # LATIN LETTER T WITH COMMA BELOW
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Ewindows1252 \z/oxms) {
-        %lc = (%lc,
-            "\x8A" => "\x9A", # LATIN LETTER S WITH CARON
-            "\x8C" => "\x9C", # LATIN LIGATURE OE
-            "\x8E" => "\x9E", # LATIN LETTER Z WITH CARON
-            "\x9F" => "\xFF", # LATIN LETTER Y WITH DIAERESIS
-            "\xC0" => "\xE0", # LATIN LETTER A WITH GRAVE
-            "\xC1" => "\xE1", # LATIN LETTER A WITH ACUTE
-            "\xC2" => "\xE2", # LATIN LETTER A WITH CIRCUMFLEX
-            "\xC3" => "\xE3", # LATIN LETTER A WITH TILDE
-            "\xC4" => "\xE4", # LATIN LETTER A WITH DIAERESIS
-            "\xC5" => "\xE5", # LATIN LETTER A WITH RING ABOVE
-            "\xC6" => "\xE6", # LATIN LETTER AE
-            "\xC7" => "\xE7", # LATIN LETTER C WITH CEDILLA
-            "\xC8" => "\xE8", # LATIN LETTER E WITH GRAVE
-            "\xC9" => "\xE9", # LATIN LETTER E WITH ACUTE
-            "\xCA" => "\xEA", # LATIN LETTER E WITH CIRCUMFLEX
-            "\xCB" => "\xEB", # LATIN LETTER E WITH DIAERESIS
-            "\xCC" => "\xEC", # LATIN LETTER I WITH GRAVE
-            "\xCD" => "\xED", # LATIN LETTER I WITH ACUTE
-            "\xCE" => "\xEE", # LATIN LETTER I WITH CIRCUMFLEX
-            "\xCF" => "\xEF", # LATIN LETTER I WITH DIAERESIS
-            "\xD0" => "\xF0", # LATIN LETTER ETH
-            "\xD1" => "\xF1", # LATIN LETTER N WITH TILDE
-            "\xD2" => "\xF2", # LATIN LETTER O WITH GRAVE
-            "\xD3" => "\xF3", # LATIN LETTER O WITH ACUTE
-            "\xD4" => "\xF4", # LATIN LETTER O WITH CIRCUMFLEX
-            "\xD5" => "\xF5", # LATIN LETTER O WITH TILDE
-            "\xD6" => "\xF6", # LATIN LETTER O WITH DIAERESIS
-            "\xD8" => "\xF8", # LATIN LETTER O WITH STROKE
-            "\xD9" => "\xF9", # LATIN LETTER U WITH GRAVE
-            "\xDA" => "\xFA", # LATIN LETTER U WITH ACUTE
-            "\xDB" => "\xFB", # LATIN LETTER U WITH CIRCUMFLEX
-            "\xDC" => "\xFC", # LATIN LETTER U WITH DIAERESIS
-            "\xDD" => "\xFD", # LATIN LETTER Y WITH ACUTE
-            "\xDE" => "\xFE", # LATIN LETTER THORN
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Ewindows1258 \z/oxms) {
-        %lc = (%lc,
-            "\x8C" => "\x9C", # LATIN LIGATURE OE
-            "\x9F" => "\xFF", # LATIN LETTER Y WITH DIAERESIS
-            "\xC0" => "\xE0", # LATIN LETTER A WITH GRAVE
-            "\xC1" => "\xE1", # LATIN LETTER A WITH ACUTE
-            "\xC2" => "\xE2", # LATIN LETTER A WITH CIRCUMFLEX
-            "\xC3" => "\xE3", # LATIN LETTER A WITH BREVE
-            "\xC4" => "\xE4", # LATIN LETTER A WITH DIAERESIS
-            "\xC5" => "\xE5", # LATIN LETTER A WITH RING ABOVE
-            "\xC6" => "\xE6", # LATIN LETTER AE
-            "\xC7" => "\xE7", # LATIN LETTER C WITH CEDILLA
-            "\xC8" => "\xE8", # LATIN LETTER E WITH GRAVE
-            "\xC9" => "\xE9", # LATIN LETTER E WITH ACUTE
-            "\xCA" => "\xEA", # LATIN LETTER E WITH CIRCUMFLEX
-            "\xCB" => "\xEB", # LATIN LETTER E WITH DIAERESIS
-            "\xCD" => "\xED", # LATIN LETTER I WITH ACUTE
-            "\xCE" => "\xEE", # LATIN LETTER I WITH CIRCUMFLEX
-            "\xCF" => "\xEF", # LATIN LETTER I WITH DIAERESIS
-            "\xD0" => "\xF0", # LATIN LETTER D WITH STROKE
-            "\xD1" => "\xF1", # LATIN LETTER N WITH TILDE
-            "\xD3" => "\xF3", # LATIN LETTER O WITH ACUTE
-            "\xD4" => "\xF4", # LATIN LETTER O WITH CIRCUMFLEX
-            "\xD5" => "\xF5", # LATIN LETTER O WITH HORN
-            "\xD6" => "\xF6", # LATIN LETTER O WITH DIAERESIS
-            "\xD8" => "\xF8", # LATIN LETTER O WITH STROKE
-            "\xD9" => "\xF9", # LATIN LETTER U WITH GRAVE
-            "\xDA" => "\xFA", # LATIN LETTER U WITH ACUTE
-            "\xDB" => "\xFB", # LATIN LETTER U WITH CIRCUMFLEX
-            "\xDC" => "\xFC", # LATIN LETTER U WITH DIAERESIS
-            "\xDD" => "\xFD", # LATIN LETTER U WITH HORN
-        );
-    }
-
-    # lower case first with parameter
-    sub Egbk::lcfirst(@) {
-        if (@_) {
-            my $s = shift @_;
-            if (@_ and wantarray) {
-                return Egbk::lc(CORE::substr($s,0,1)) . CORE::substr($s,1), @_;
-            }
-            else {
-                return Egbk::lc(CORE::substr($s,0,1)) . CORE::substr($s,1);
-            }
+sub Egbk::lcfirst(@) {
+    if (@_) {
+        my $s = shift @_;
+        if (@_ and wantarray) {
+            return Egbk::lc(CORE::substr($s,0,1)) . CORE::substr($s,1), @_;
         }
         else {
-            return Egbk::lc(CORE::substr($_,0,1)) . CORE::substr($_,1);
+            return Egbk::lc(CORE::substr($s,0,1)) . CORE::substr($s,1);
         }
     }
-
-    # lower case first without parameter
-    sub Egbk::lcfirst_() {
+    else {
         return Egbk::lc(CORE::substr($_,0,1)) . CORE::substr($_,1);
-    }
-
-    # lower case with parameter
-    sub Egbk::lc(@) {
-        if (@_) {
-            my $s = shift @_;
-            if (@_ and wantarray) {
-                return join('', map {defined($lc{$_}) ? $lc{$_} : $_} ($s =~ m/\G ($q_char) /oxmsg)), @_;
-            }
-            else {
-                return join('', map {defined($lc{$_}) ? $lc{$_} : $_} ($s =~ m/\G ($q_char) /oxmsg));
-            }
-        }
-        else {
-            return Egbk::lc_();
-        }
-    }
-
-    # lower case without parameter
-    sub Egbk::lc_() {
-        my $s = $_;
-        return join '', map {defined($lc{$_}) ? $lc{$_} : $_} ($s =~ m/\G ($q_char) /oxmsg);
     }
 }
 
 #
-# GBK upper case
+# GBK lower case first without parameter
 #
-{
-    my %uc = ();
-    @uc{qw(a b c d e f g h i j k l m n o p q r s t u v w x y z)} =
-        qw(A B C D E F G H I J K L M N O P Q R S T U V W X Y Z);
+sub Egbk::lcfirst_() {
+    return Egbk::lc(CORE::substr($_,0,1)) . CORE::substr($_,1);
+}
 
-    if (0) {
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Eusascii \z/oxms) {
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Elatin1 \z/oxms) {
-        %uc = (%uc,
-            "\xE0" => "\xC0", # LATIN LETTER A WITH GRAVE
-            "\xE1" => "\xC1", # LATIN LETTER A WITH ACUTE
-            "\xE2" => "\xC2", # LATIN LETTER A WITH CIRCUMFLEX
-            "\xE3" => "\xC3", # LATIN LETTER A WITH TILDE
-            "\xE4" => "\xC4", # LATIN LETTER A WITH DIAERESIS
-            "\xE5" => "\xC5", # LATIN LETTER A WITH RING ABOVE
-            "\xE6" => "\xC6", # LATIN LETTER AE
-            "\xE7" => "\xC7", # LATIN LETTER C WITH CEDILLA
-            "\xE8" => "\xC8", # LATIN LETTER E WITH GRAVE
-            "\xE9" => "\xC9", # LATIN LETTER E WITH ACUTE
-            "\xEA" => "\xCA", # LATIN LETTER E WITH CIRCUMFLEX
-            "\xEB" => "\xCB", # LATIN LETTER E WITH DIAERESIS
-            "\xEC" => "\xCC", # LATIN LETTER I WITH GRAVE
-            "\xED" => "\xCD", # LATIN LETTER I WITH ACUTE
-            "\xEE" => "\xCE", # LATIN LETTER I WITH CIRCUMFLEX
-            "\xEF" => "\xCF", # LATIN LETTER I WITH DIAERESIS
-            "\xF0" => "\xD0", # LATIN LETTER ETH (Icelandic)
-            "\xF1" => "\xD1", # LATIN LETTER N WITH TILDE
-            "\xF2" => "\xD2", # LATIN LETTER O WITH GRAVE
-            "\xF3" => "\xD3", # LATIN LETTER O WITH ACUTE
-            "\xF4" => "\xD4", # LATIN LETTER O WITH CIRCUMFLEX
-            "\xF5" => "\xD5", # LATIN LETTER O WITH TILDE
-            "\xF6" => "\xD6", # LATIN LETTER O WITH DIAERESIS
-            "\xF8" => "\xD8", # LATIN LETTER O WITH STROKE
-            "\xF9" => "\xD9", # LATIN LETTER U WITH GRAVE
-            "\xFA" => "\xDA", # LATIN LETTER U WITH ACUTE
-            "\xFB" => "\xDB", # LATIN LETTER U WITH CIRCUMFLEX
-            "\xFC" => "\xDC", # LATIN LETTER U WITH DIAERESIS
-            "\xFD" => "\xDD", # LATIN LETTER Y WITH ACUTE
-            "\xFE" => "\xDE", # LATIN LETTER THORN (Icelandic)
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Elatin2 \z/oxms) {
-        %uc = (%uc,
-            "\xB1" => "\xA1", # LATIN LETTER A WITH OGONEK
-            "\xB3" => "\xA3", # LATIN LETTER L WITH STROKE
-            "\xB5" => "\xA5", # LATIN LETTER L WITH CARON
-            "\xB6" => "\xA6", # LATIN LETTER S WITH ACUTE
-            "\xB9" => "\xA9", # LATIN LETTER S WITH CARON
-            "\xBA" => "\xAA", # LATIN LETTER S WITH CEDILLA
-            "\xBB" => "\xAB", # LATIN LETTER T WITH CARON
-            "\xBC" => "\xAC", # LATIN LETTER Z WITH ACUTE
-            "\xBE" => "\xAE", # LATIN LETTER Z WITH CARON
-            "\xBF" => "\xAF", # LATIN LETTER Z WITH DOT ABOVE
-            "\xE0" => "\xC0", # LATIN LETTER R WITH ACUTE
-            "\xE1" => "\xC1", # LATIN LETTER A WITH ACUTE
-            "\xE2" => "\xC2", # LATIN LETTER A WITH CIRCUMFLEX
-            "\xE3" => "\xC3", # LATIN LETTER A WITH BREVE
-            "\xE4" => "\xC4", # LATIN LETTER A WITH DIAERESIS
-            "\xE5" => "\xC5", # LATIN LETTER L WITH ACUTE
-            "\xE6" => "\xC6", # LATIN LETTER C WITH ACUTE
-            "\xE7" => "\xC7", # LATIN LETTER C WITH CEDILLA
-            "\xE8" => "\xC8", # LATIN LETTER C WITH CARON
-            "\xE9" => "\xC9", # LATIN LETTER E WITH ACUTE
-            "\xEA" => "\xCA", # LATIN LETTER E WITH OGONEK
-            "\xEB" => "\xCB", # LATIN LETTER E WITH DIAERESIS
-            "\xEC" => "\xCC", # LATIN LETTER E WITH CARON
-            "\xED" => "\xCD", # LATIN LETTER I WITH ACUTE
-            "\xEE" => "\xCE", # LATIN LETTER I WITH CIRCUMFLEX
-            "\xEF" => "\xCF", # LATIN LETTER D WITH CARON
-            "\xF0" => "\xD0", # LATIN LETTER D WITH STROKE
-            "\xF1" => "\xD1", # LATIN LETTER N WITH ACUTE
-            "\xF2" => "\xD2", # LATIN LETTER N WITH CARON
-            "\xF3" => "\xD3", # LATIN LETTER O WITH ACUTE
-            "\xF4" => "\xD4", # LATIN LETTER O WITH CIRCUMFLEX
-            "\xF5" => "\xD5", # LATIN LETTER O WITH DOUBLE ACUTE
-            "\xF6" => "\xD6", # LATIN LETTER O WITH DIAERESIS
-            "\xF8" => "\xD8", # LATIN LETTER R WITH CARON
-            "\xF9" => "\xD9", # LATIN LETTER U WITH RING ABOVE
-            "\xFA" => "\xDA", # LATIN LETTER U WITH ACUTE
-            "\xFB" => "\xDB", # LATIN LETTER U WITH DOUBLE ACUTE
-            "\xFC" => "\xDC", # LATIN LETTER U WITH DIAERESIS
-            "\xFD" => "\xDD", # LATIN LETTER Y WITH ACUTE
-            "\xFE" => "\xDE", # LATIN LETTER T WITH CEDILLA
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Elatin3 \z/oxms) {
-        %uc = (%uc,
-            "\xB1" => "\xA1", # LATIN LETTER H WITH STROKE
-            "\xB6" => "\xA6", # LATIN LETTER H WITH CIRCUMFLEX
-            "\xBA" => "\xAA", # LATIN LETTER S WITH CEDILLA
-            "\xBB" => "\xAB", # LATIN LETTER G WITH BREVE
-            "\xBC" => "\xAC", # LATIN LETTER J WITH CIRCUMFLEX
-            "\xBF" => "\xAF", # LATIN LETTER Z WITH DOT ABOVE
-            "\xE0" => "\xC0", # LATIN LETTER A WITH GRAVE
-            "\xE1" => "\xC1", # LATIN LETTER A WITH ACUTE
-            "\xE2" => "\xC2", # LATIN LETTER A WITH CIRCUMFLEX
-            "\xE4" => "\xC4", # LATIN LETTER A WITH DIAERESIS
-            "\xE5" => "\xC5", # LATIN LETTER C WITH DOT ABOVE
-            "\xE6" => "\xC6", # LATIN LETTER C WITH CIRCUMFLEX
-            "\xE7" => "\xC7", # LATIN LETTER C WITH CEDILLA
-            "\xE8" => "\xC8", # LATIN LETTER E WITH GRAVE
-            "\xE9" => "\xC9", # LATIN LETTER E WITH ACUTE
-            "\xEA" => "\xCA", # LATIN LETTER E WITH CIRCUMFLEX
-            "\xEB" => "\xCB", # LATIN LETTER E WITH DIAERESIS
-            "\xEC" => "\xCC", # LATIN LETTER I WITH GRAVE
-            "\xED" => "\xCD", # LATIN LETTER I WITH ACUTE
-            "\xEE" => "\xCE", # LATIN LETTER I WITH CIRCUMFLEX
-            "\xEF" => "\xCF", # LATIN LETTER I WITH DIAERESIS
-            "\xF1" => "\xD1", # LATIN LETTER N WITH TILDE
-            "\xF2" => "\xD2", # LATIN LETTER O WITH GRAVE
-            "\xF3" => "\xD3", # LATIN LETTER O WITH ACUTE
-            "\xF4" => "\xD4", # LATIN LETTER O WITH CIRCUMFLEX
-            "\xF5" => "\xD5", # LATIN LETTER G WITH DOT ABOVE
-            "\xF6" => "\xD6", # LATIN LETTER O WITH DIAERESIS
-            "\xF8" => "\xD8", # LATIN LETTER G WITH CIRCUMFLEX
-            "\xF9" => "\xD9", # LATIN LETTER U WITH GRAVE
-            "\xFA" => "\xDA", # LATIN LETTER U WITH ACUTE
-            "\xFB" => "\xDB", # LATIN LETTER U WITH CIRCUMFLEX
-            "\xFC" => "\xDC", # LATIN LETTER U WITH DIAERESIS
-            "\xFD" => "\xDD", # LATIN LETTER U WITH BREVE
-            "\xFE" => "\xDE", # LATIN LETTER S WITH CIRCUMFLEX
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Elatin4 \z/oxms) {
-        %uc = (%uc,
-            "\xB1" => "\xA1", # LATIN LETTER A WITH OGONEK
-            "\xB3" => "\xA3", # LATIN LETTER R WITH CEDILLA
-            "\xB5" => "\xA5", # LATIN LETTER I WITH TILDE
-            "\xB6" => "\xA6", # LATIN LETTER L WITH CEDILLA
-            "\xB9" => "\xA9", # LATIN LETTER S WITH CARON
-            "\xBA" => "\xAA", # LATIN LETTER E WITH MACRON
-            "\xBB" => "\xAB", # LATIN LETTER G WITH CEDILLA
-            "\xBC" => "\xAC", # LATIN LETTER T WITH STROKE
-            "\xBE" => "\xAE", # LATIN LETTER Z WITH CARON
-            "\xBF" => "\xBD", # LATIN LETTER ENG
-            "\xE0" => "\xC0", # LATIN LETTER A WITH MACRON
-            "\xE1" => "\xC1", # LATIN LETTER A WITH ACUTE
-            "\xE2" => "\xC2", # LATIN LETTER A WITH CIRCUMFLEX
-            "\xE3" => "\xC3", # LATIN LETTER A WITH TILDE
-            "\xE4" => "\xC4", # LATIN LETTER A WITH DIAERESIS
-            "\xE5" => "\xC5", # LATIN LETTER A WITH RING ABOVE
-            "\xE6" => "\xC6", # LATIN LETTER AE
-            "\xE7" => "\xC7", # LATIN LETTER I WITH OGONEK
-            "\xE8" => "\xC8", # LATIN LETTER C WITH CARON
-            "\xE9" => "\xC9", # LATIN LETTER E WITH ACUTE
-            "\xEA" => "\xCA", # LATIN LETTER E WITH OGONEK
-            "\xEB" => "\xCB", # LATIN LETTER E WITH DIAERESIS
-            "\xEC" => "\xCC", # LATIN LETTER E WITH DOT ABOVE
-            "\xED" => "\xCD", # LATIN LETTER I WITH ACUTE
-            "\xEE" => "\xCE", # LATIN LETTER I WITH CIRCUMFLEX
-            "\xEF" => "\xCF", # LATIN LETTER I WITH MACRON
-            "\xF0" => "\xD0", # LATIN LETTER D WITH STROKE
-            "\xF1" => "\xD1", # LATIN LETTER N WITH CEDILLA
-            "\xF2" => "\xD2", # LATIN LETTER O WITH MACRON
-            "\xF3" => "\xD3", # LATIN LETTER K WITH CEDILLA
-            "\xF4" => "\xD4", # LATIN LETTER O WITH CIRCUMFLEX
-            "\xF5" => "\xD5", # LATIN LETTER O WITH TILDE
-            "\xF6" => "\xD6", # LATIN LETTER O WITH DIAERESIS
-            "\xF8" => "\xD8", # LATIN LETTER O WITH STROKE
-            "\xF9" => "\xD9", # LATIN LETTER U WITH OGONEK
-            "\xFA" => "\xDA", # LATIN LETTER U WITH ACUTE
-            "\xFB" => "\xDB", # LATIN LETTER U WITH CIRCUMFLEX
-            "\xFC" => "\xDC", # LATIN LETTER U WITH DIAERESIS
-            "\xFD" => "\xDD", # LATIN LETTER U WITH TILDE
-            "\xFE" => "\xDE", # LATIN LETTER U WITH MACRON
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Ecyrillic \z/oxms) {
-        %uc = (%uc,
-            "\xD0" => "\xB0", # CYRILLIC LETTER A
-            "\xD1" => "\xB1", # CYRILLIC LETTER BE
-            "\xD2" => "\xB2", # CYRILLIC LETTER VE
-            "\xD3" => "\xB3", # CYRILLIC LETTER GHE
-            "\xD4" => "\xB4", # CYRILLIC LETTER DE
-            "\xD5" => "\xB5", # CYRILLIC LETTER IE
-            "\xD6" => "\xB6", # CYRILLIC LETTER ZHE
-            "\xD7" => "\xB7", # CYRILLIC LETTER ZE
-            "\xD8" => "\xB8", # CYRILLIC LETTER I
-            "\xD9" => "\xB9", # CYRILLIC LETTER SHORT I
-            "\xDA" => "\xBA", # CYRILLIC LETTER KA
-            "\xDB" => "\xBB", # CYRILLIC LETTER EL
-            "\xDC" => "\xBC", # CYRILLIC LETTER EM
-            "\xDD" => "\xBD", # CYRILLIC LETTER EN
-            "\xDE" => "\xBE", # CYRILLIC LETTER O
-            "\xDF" => "\xBF", # CYRILLIC LETTER PE
-            "\xE0" => "\xC0", # CYRILLIC LETTER ER
-            "\xE1" => "\xC1", # CYRILLIC LETTER ES
-            "\xE2" => "\xC2", # CYRILLIC LETTER TE
-            "\xE3" => "\xC3", # CYRILLIC LETTER U
-            "\xE4" => "\xC4", # CYRILLIC LETTER EF
-            "\xE5" => "\xC5", # CYRILLIC LETTER HA
-            "\xE6" => "\xC6", # CYRILLIC LETTER TSE
-            "\xE7" => "\xC7", # CYRILLIC LETTER CHE
-            "\xE8" => "\xC8", # CYRILLIC LETTER SHA
-            "\xE9" => "\xC9", # CYRILLIC LETTER SHCHA
-            "\xEA" => "\xCA", # CYRILLIC LETTER HARD SIGN
-            "\xEB" => "\xCB", # CYRILLIC LETTER YERU
-            "\xEC" => "\xCC", # CYRILLIC LETTER SOFT SIGN
-            "\xED" => "\xCD", # CYRILLIC LETTER E
-            "\xEE" => "\xCE", # CYRILLIC LETTER YU
-            "\xEF" => "\xCF", # CYRILLIC LETTER YA
-            "\xF1" => "\xA1", # CYRILLIC LETTER IO
-            "\xF2" => "\xA2", # CYRILLIC LETTER DJE
-            "\xF3" => "\xA3", # CYRILLIC LETTER GJE
-            "\xF4" => "\xA4", # CYRILLIC LETTER UKRAINIAN IE
-            "\xF5" => "\xA5", # CYRILLIC LETTER DZE
-            "\xF6" => "\xA6", # CYRILLIC LETTER BYELORUSSIAN-UKRAINIAN I
-            "\xF7" => "\xA7", # CYRILLIC LETTER YI
-            "\xF8" => "\xA8", # CYRILLIC LETTER JE
-            "\xF9" => "\xA9", # CYRILLIC LETTER LJE
-            "\xFA" => "\xAA", # CYRILLIC LETTER NJE
-            "\xFB" => "\xAB", # CYRILLIC LETTER TSHE
-            "\xFC" => "\xAC", # CYRILLIC LETTER KJE
-            "\xFE" => "\xAE", # CYRILLIC LETTER SHORT U
-            "\xFF" => "\xAF", # CYRILLIC LETTER DZHE
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Ekoi8r \z/oxms) {
-        %uc = (%uc,
-            "\xA3" => "\xB3", # CYRILLIC LETTER IO
-            "\xC0" => "\xE0", # CYRILLIC LETTER IU
-            "\xC1" => "\xE1", # CYRILLIC LETTER A
-            "\xC2" => "\xE2", # CYRILLIC LETTER BE
-            "\xC3" => "\xE3", # CYRILLIC LETTER TSE
-            "\xC4" => "\xE4", # CYRILLIC LETTER DE
-            "\xC5" => "\xE5", # CYRILLIC LETTER IE
-            "\xC6" => "\xE6", # CYRILLIC LETTER EF
-            "\xC7" => "\xE7", # CYRILLIC LETTER GE
-            "\xC8" => "\xE8", # CYRILLIC LETTER KHA
-            "\xC9" => "\xE9", # CYRILLIC LETTER II
-            "\xCA" => "\xEA", # CYRILLIC LETTER SHORT II
-            "\xCB" => "\xEB", # CYRILLIC LETTER KA
-            "\xCC" => "\xEC", # CYRILLIC LETTER EL
-            "\xCD" => "\xED", # CYRILLIC LETTER EM
-            "\xCE" => "\xEE", # CYRILLIC LETTER EN
-            "\xCF" => "\xEF", # CYRILLIC LETTER O
-            "\xD0" => "\xF0", # CYRILLIC LETTER PE
-            "\xD1" => "\xF1", # CYRILLIC LETTER IA
-            "\xD2" => "\xF2", # CYRILLIC LETTER ER
-            "\xD3" => "\xF3", # CYRILLIC LETTER ES
-            "\xD4" => "\xF4", # CYRILLIC LETTER TE
-            "\xD5" => "\xF5", # CYRILLIC LETTER U
-            "\xD6" => "\xF6", # CYRILLIC LETTER ZHE
-            "\xD7" => "\xF7", # CYRILLIC LETTER VE
-            "\xD8" => "\xF8", # CYRILLIC LETTER SOFT SIGN
-            "\xD9" => "\xF9", # CYRILLIC LETTER YERI
-            "\xDA" => "\xFA", # CYRILLIC LETTER ZE
-            "\xDB" => "\xFB", # CYRILLIC LETTER SHA
-            "\xDC" => "\xFC", # CYRILLIC LETTER REVERSED E
-            "\xDD" => "\xFD", # CYRILLIC LETTER SHCHA
-            "\xDE" => "\xFE", # CYRILLIC LETTER CHE
-            "\xDF" => "\xFF", # CYRILLIC LETTER HARD SIGN
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Ekoi8u \z/oxms) {
-        %uc = (%uc,
-            "\xA3" => "\xB3", # CYRILLIC LETTER IO
-            "\xA4" => "\xB4", # CYRILLIC LETTER UKRAINIAN IE
-            "\xA6" => "\xB6", # CYRILLIC LETTER BYELORUSSIAN-UKRAINIAN I
-            "\xA7" => "\xB7", # CYRILLIC LETTER YI (UKRAINIAN)
-            "\xAD" => "\xBD", # CYRILLIC LETTER GHE WITH UPTURN
-            "\xC0" => "\xE0", # CYRILLIC LETTER YU
-            "\xC1" => "\xE1", # CYRILLIC LETTER A
-            "\xC2" => "\xE2", # CYRILLIC LETTER BE
-            "\xC3" => "\xE3", # CYRILLIC LETTER TSE
-            "\xC4" => "\xE4", # CYRILLIC LETTER DE
-            "\xC5" => "\xE5", # CYRILLIC LETTER IE
-            "\xC6" => "\xE6", # CYRILLIC LETTER EF
-            "\xC7" => "\xE7", # CYRILLIC LETTER GHE
-            "\xC8" => "\xE8", # CYRILLIC LETTER KHA
-            "\xC9" => "\xE9", # CYRILLIC LETTER I
-            "\xCA" => "\xEA", # CYRILLIC LETTER SHORT I
-            "\xCB" => "\xEB", # CYRILLIC LETTER KA
-            "\xCC" => "\xEC", # CYRILLIC LETTER EL
-            "\xCD" => "\xED", # CYRILLIC LETTER EM
-            "\xCE" => "\xEE", # CYRILLIC LETTER EN
-            "\xCF" => "\xEF", # CYRILLIC LETTER O
-            "\xD0" => "\xF0", # CYRILLIC LETTER PE
-            "\xD1" => "\xF1", # CYRILLIC LETTER YA
-            "\xD2" => "\xF2", # CYRILLIC LETTER ER
-            "\xD3" => "\xF3", # CYRILLIC LETTER ES
-            "\xD4" => "\xF4", # CYRILLIC LETTER TE
-            "\xD5" => "\xF5", # CYRILLIC LETTER U
-            "\xD6" => "\xF6", # CYRILLIC LETTER ZHE
-            "\xD7" => "\xF7", # CYRILLIC LETTER VE
-            "\xD8" => "\xF8", # CYRILLIC LETTER SOFT SIGN
-            "\xD9" => "\xF9", # CYRILLIC LETTER YERU
-            "\xDA" => "\xFA", # CYRILLIC LETTER ZE
-            "\xDB" => "\xFB", # CYRILLIC LETTER SHA
-            "\xDC" => "\xFC", # CYRILLIC LETTER E
-            "\xDD" => "\xFD", # CYRILLIC LETTER SHCHA
-            "\xDE" => "\xFE", # CYRILLIC LETTER CHE
-            "\xDF" => "\xFF", # CYRILLIC LETTER HARD SIGN
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Egreek \z/oxms) {
-        %uc = (%uc,
-            "\xDC" => "\xB6", # GREEK LETTER ALPHA WITH TONOS
-            "\xDD" => "\xB8", # GREEK LETTER EPSILON WITH TONOS
-            "\xDE" => "\xB9", # GREEK LETTER ETA WITH TONOS
-            "\xDF" => "\xBA", # GREEK LETTER IOTA WITH TONOS
-            "\xE1" => "\xC1", # GREEK LETTER ALPHA
-            "\xE2" => "\xC2", # GREEK LETTER BETA
-            "\xE3" => "\xC3", # GREEK LETTER GAMMA
-            "\xE4" => "\xC4", # GREEK LETTER DELTA
-            "\xE5" => "\xC5", # GREEK LETTER EPSILON
-            "\xE6" => "\xC6", # GREEK LETTER ZETA
-            "\xE7" => "\xC7", # GREEK LETTER ETA
-            "\xE8" => "\xC8", # GREEK LETTER THETA
-            "\xE9" => "\xC9", # GREEK LETTER IOTA
-            "\xEA" => "\xCA", # GREEK LETTER KAPPA
-            "\xEB" => "\xCB", # GREEK LETTER LAMDA
-            "\xEC" => "\xCC", # GREEK LETTER MU
-            "\xED" => "\xCD", # GREEK LETTER NU
-            "\xEE" => "\xCE", # GREEK LETTER XI
-            "\xEF" => "\xCF", # GREEK LETTER OMICRON
-            "\xF0" => "\xD0", # GREEK LETTER PI
-            "\xF1" => "\xD1", # GREEK LETTER RHO
-            "\xF3" => "\xD3", # GREEK LETTER SIGMA
-            "\xF4" => "\xD4", # GREEK LETTER TAU
-            "\xF5" => "\xD5", # GREEK LETTER UPSILON
-            "\xF6" => "\xD6", # GREEK LETTER PHI
-            "\xF7" => "\xD7", # GREEK LETTER CHI
-            "\xF8" => "\xD8", # GREEK LETTER PSI
-            "\xF9" => "\xD9", # GREEK LETTER OMEGA
-            "\xFA" => "\xDA", # GREEK LETTER IOTA WITH DIALYTIKA
-            "\xFB" => "\xDB", # GREEK LETTER UPSILON WITH DIALYTIKA
-            "\xFC" => "\xBC", # GREEK LETTER OMICRON WITH TONOS
-            "\xFD" => "\xBE", # GREEK LETTER UPSILON WITH TONOS
-            "\xFE" => "\xBF", # GREEK LETTER OMEGA WITH TONOS
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Elatin5 \z/oxms) {
-        %uc = (%uc,
-            "\xE0" => "\xC0", # LATIN LETTER A WITH GRAVE
-            "\xE1" => "\xC1", # LATIN LETTER A WITH ACUTE
-            "\xE2" => "\xC2", # LATIN LETTER A WITH CIRCUMFLEX
-            "\xE3" => "\xC3", # LATIN LETTER A WITH TILDE
-            "\xE4" => "\xC4", # LATIN LETTER A WITH DIAERESIS
-            "\xE5" => "\xC5", # LATIN LETTER A WITH RING ABOVE
-            "\xE6" => "\xC6", # LATIN LETTER AE
-            "\xE7" => "\xC7", # LATIN LETTER C WITH CEDILLA
-            "\xE8" => "\xC8", # LATIN LETTER E WITH GRAVE
-            "\xE9" => "\xC9", # LATIN LETTER E WITH ACUTE
-            "\xEA" => "\xCA", # LATIN LETTER E WITH CIRCUMFLEX
-            "\xEB" => "\xCB", # LATIN LETTER E WITH DIAERESIS
-            "\xEC" => "\xCC", # LATIN LETTER I WITH GRAVE
-            "\xED" => "\xCD", # LATIN LETTER I WITH ACUTE
-            "\xEE" => "\xCE", # LATIN LETTER I WITH CIRCUMFLEX
-            "\xEF" => "\xCF", # LATIN LETTER I WITH DIAERESIS
-            "\xF0" => "\xD0", # LATIN LETTER G WITH BREVE
-            "\xF1" => "\xD1", # LATIN LETTER N WITH TILDE
-            "\xF2" => "\xD2", # LATIN LETTER O WITH GRAVE
-            "\xF3" => "\xD3", # LATIN LETTER O WITH ACUTE
-            "\xF4" => "\xD4", # LATIN LETTER O WITH CIRCUMFLEX
-            "\xF5" => "\xD5", # LATIN LETTER O WITH TILDE
-            "\xF6" => "\xD6", # LATIN LETTER O WITH DIAERESIS
-            "\xF8" => "\xD8", # LATIN LETTER O WITH STROKE
-            "\xF9" => "\xD9", # LATIN LETTER U WITH GRAVE
-            "\xFA" => "\xDA", # LATIN LETTER U WITH ACUTE
-            "\xFB" => "\xDB", # LATIN LETTER U WITH CIRCUMFLEX
-            "\xFC" => "\xDC", # LATIN LETTER U WITH DIAERESIS
-            "\xFE" => "\xDE", # LATIN LETTER S WITH CEDILLA
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Elatin6 \z/oxms) {
-        %uc = (%uc,
-            "\xB1" => "\xA1", # LATIN LETTER A WITH OGONEK
-            "\xB2" => "\xA2", # LATIN LETTER E WITH MACRON
-            "\xB3" => "\xA3", # LATIN LETTER G WITH CEDILLA
-            "\xB4" => "\xA4", # LATIN LETTER I WITH MACRON
-            "\xB5" => "\xA5", # LATIN LETTER I WITH TILDE
-            "\xB6" => "\xA6", # LATIN LETTER K WITH CEDILLA
-            "\xB8" => "\xA8", # LATIN LETTER L WITH CEDILLA
-            "\xB9" => "\xA9", # LATIN LETTER D WITH STROKE
-            "\xBA" => "\xAA", # LATIN LETTER S WITH CARON
-            "\xBB" => "\xAB", # LATIN LETTER T WITH STROKE
-            "\xBC" => "\xAC", # LATIN LETTER Z WITH CARON
-            "\xBE" => "\xAE", # LATIN LETTER U WITH MACRON
-            "\xBF" => "\xAF", # LATIN LETTER ENG
-            "\xE0" => "\xC0", # LATIN LETTER A WITH MACRON
-            "\xE1" => "\xC1", # LATIN LETTER A WITH ACUTE
-            "\xE2" => "\xC2", # LATIN LETTER A WITH CIRCUMFLEX
-            "\xE3" => "\xC3", # LATIN LETTER A WITH TILDE
-            "\xE4" => "\xC4", # LATIN LETTER A WITH DIAERESIS
-            "\xE5" => "\xC5", # LATIN LETTER A WITH RING ABOVE
-            "\xE6" => "\xC6", # LATIN LETTER AE
-            "\xE7" => "\xC7", # LATIN LETTER I WITH OGONEK
-            "\xE8" => "\xC8", # LATIN LETTER C WITH CARON
-            "\xE9" => "\xC9", # LATIN LETTER E WITH ACUTE
-            "\xEA" => "\xCA", # LATIN LETTER E WITH OGONEK
-            "\xEB" => "\xCB", # LATIN LETTER E WITH DIAERESIS
-            "\xEC" => "\xCC", # LATIN LETTER E WITH DOT ABOVE
-            "\xED" => "\xCD", # LATIN LETTER I WITH ACUTE
-            "\xEE" => "\xCE", # LATIN LETTER I WITH CIRCUMFLEX
-            "\xEF" => "\xCF", # LATIN LETTER I WITH DIAERESIS
-            "\xF0" => "\xD0", # LATIN LETTER ETH (Icelandic)
-            "\xF1" => "\xD1", # LATIN LETTER N WITH CEDILLA
-            "\xF2" => "\xD2", # LATIN LETTER O WITH MACRON
-            "\xF3" => "\xD3", # LATIN LETTER O WITH ACUTE
-            "\xF4" => "\xD4", # LATIN LETTER O WITH CIRCUMFLEX
-            "\xF5" => "\xD5", # LATIN LETTER O WITH TILDE
-            "\xF6" => "\xD6", # LATIN LETTER O WITH DIAERESIS
-            "\xF7" => "\xD7", # LATIN LETTER U WITH TILDE
-            "\xF8" => "\xD8", # LATIN LETTER O WITH STROKE
-            "\xF9" => "\xD9", # LATIN LETTER U WITH OGONEK
-            "\xFA" => "\xDA", # LATIN LETTER U WITH ACUTE
-            "\xFB" => "\xDB", # LATIN LETTER U WITH CIRCUMFLEX
-            "\xFC" => "\xDC", # LATIN LETTER U WITH DIAERESIS
-            "\xFD" => "\xDD", # LATIN LETTER Y WITH ACUTE
-            "\xFE" => "\xDE", # LATIN LETTER THORN (Icelandic)
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Elatin7 \z/oxms) {
-        %uc = (%uc,
-            "\xB8" => "\xA8", # LATIN LETTER O WITH STROKE
-            "\xBA" => "\xAA", # LATIN LETTER R WITH CEDILLA
-            "\xBF" => "\xAF", # LATIN LETTER AE
-            "\xE0" => "\xC0", # LATIN LETTER A WITH OGONEK
-            "\xE1" => "\xC1", # LATIN LETTER I WITH OGONEK
-            "\xE2" => "\xC2", # LATIN LETTER A WITH MACRON
-            "\xE3" => "\xC3", # LATIN LETTER C WITH ACUTE
-            "\xE4" => "\xC4", # LATIN LETTER A WITH DIAERESIS
-            "\xE5" => "\xC5", # LATIN LETTER A WITH RING ABOVE
-            "\xE6" => "\xC6", # LATIN LETTER E WITH OGONEK
-            "\xE7" => "\xC7", # LATIN LETTER E WITH MACRON
-            "\xE8" => "\xC8", # LATIN LETTER C WITH CARON
-            "\xE9" => "\xC9", # LATIN LETTER E WITH ACUTE
-            "\xEA" => "\xCA", # LATIN LETTER Z WITH ACUTE
-            "\xEB" => "\xCB", # LATIN LETTER E WITH DOT ABOVE
-            "\xEC" => "\xCC", # LATIN LETTER G WITH CEDILLA
-            "\xED" => "\xCD", # LATIN LETTER K WITH CEDILLA
-            "\xEE" => "\xCE", # LATIN LETTER I WITH MACRON
-            "\xEF" => "\xCF", # LATIN LETTER L WITH CEDILLA
-            "\xF0" => "\xD0", # LATIN LETTER S WITH CARON
-            "\xF1" => "\xD1", # LATIN LETTER N WITH ACUTE
-            "\xF2" => "\xD2", # LATIN LETTER N WITH CEDILLA
-            "\xF3" => "\xD3", # LATIN LETTER O WITH ACUTE
-            "\xF4" => "\xD4", # LATIN LETTER O WITH MACRON
-            "\xF5" => "\xD5", # LATIN LETTER O WITH TILDE
-            "\xF6" => "\xD6", # LATIN LETTER O WITH DIAERESIS
-            "\xF8" => "\xD8", # LATIN LETTER U WITH OGONEK
-            "\xF9" => "\xD9", # LATIN LETTER L WITH STROKE
-            "\xFA" => "\xDA", # LATIN LETTER S WITH ACUTE
-            "\xFB" => "\xDB", # LATIN LETTER U WITH MACRON
-            "\xFC" => "\xDC", # LATIN LETTER U WITH DIAERESIS
-            "\xFD" => "\xDD", # LATIN LETTER Z WITH DOT ABOVE
-            "\xFE" => "\xDE", # LATIN LETTER Z WITH CARON
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Elatin8 \z/oxms) {
-        %uc = (%uc,
-            "\xA2" => "\xA1", # LATIN LETTER B WITH DOT ABOVE
-            "\xA5" => "\xA4", # LATIN LETTER C WITH DOT ABOVE
-            "\xAB" => "\xA6", # LATIN LETTER D WITH DOT ABOVE
-            "\xB1" => "\xB0", # LATIN LETTER F WITH DOT ABOVE
-            "\xB3" => "\xB2", # LATIN LETTER G WITH DOT ABOVE
-            "\xB5" => "\xB4", # LATIN LETTER M WITH DOT ABOVE
-            "\xB8" => "\xA8", # LATIN LETTER W WITH GRAVE
-            "\xB9" => "\xB7", # LATIN LETTER P WITH DOT ABOVE
-            "\xBA" => "\xAA", # LATIN LETTER W WITH ACUTE
-            "\xBC" => "\xAC", # LATIN LETTER Y WITH GRAVE
-            "\xBE" => "\xBD", # LATIN LETTER W WITH DIAERESIS
-            "\xBF" => "\xBB", # LATIN LETTER S WITH DOT ABOVE
-            "\xE0" => "\xC0", # LATIN LETTER A WITH GRAVE
-            "\xE1" => "\xC1", # LATIN LETTER A WITH ACUTE
-            "\xE2" => "\xC2", # LATIN LETTER A WITH CIRCUMFLEX
-            "\xE3" => "\xC3", # LATIN LETTER A WITH TILDE
-            "\xE4" => "\xC4", # LATIN LETTER A WITH DIAERESIS
-            "\xE5" => "\xC5", # LATIN LETTER A WITH RING ABOVE
-            "\xE6" => "\xC6", # LATIN LETTER AE
-            "\xE7" => "\xC7", # LATIN LETTER C WITH CEDILLA
-            "\xE8" => "\xC8", # LATIN LETTER E WITH GRAVE
-            "\xE9" => "\xC9", # LATIN LETTER E WITH ACUTE
-            "\xEA" => "\xCA", # LATIN LETTER E WITH CIRCUMFLEX
-            "\xEB" => "\xCB", # LATIN LETTER E WITH DIAERESIS
-            "\xEC" => "\xCC", # LATIN LETTER I WITH GRAVE
-            "\xED" => "\xCD", # LATIN LETTER I WITH ACUTE
-            "\xEE" => "\xCE", # LATIN LETTER I WITH CIRCUMFLEX
-            "\xEF" => "\xCF", # LATIN LETTER I WITH DIAERESIS
-            "\xF0" => "\xD0", # LATIN LETTER W WITH CIRCUMFLEX
-            "\xF1" => "\xD1", # LATIN LETTER N WITH TILDE
-            "\xF2" => "\xD2", # LATIN LETTER O WITH GRAVE
-            "\xF3" => "\xD3", # LATIN LETTER O WITH ACUTE
-            "\xF4" => "\xD4", # LATIN LETTER O WITH CIRCUMFLEX
-            "\xF5" => "\xD5", # LATIN LETTER O WITH TILDE
-            "\xF6" => "\xD6", # LATIN LETTER O WITH DIAERESIS
-            "\xF7" => "\xD7", # LATIN LETTER T WITH DOT ABOVE
-            "\xF8" => "\xD8", # LATIN LETTER O WITH STROKE
-            "\xF9" => "\xD9", # LATIN LETTER U WITH GRAVE
-            "\xFA" => "\xDA", # LATIN LETTER U WITH ACUTE
-            "\xFB" => "\xDB", # LATIN LETTER U WITH CIRCUMFLEX
-            "\xFC" => "\xDC", # LATIN LETTER U WITH DIAERESIS
-            "\xFD" => "\xDD", # LATIN LETTER Y WITH ACUTE
-            "\xFE" => "\xDE", # LATIN LETTER Y WITH CIRCUMFLEX
-            "\xFF" => "\xAF", # LATIN LETTER Y WITH DIAERESIS
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Elatin9 \z/oxms) {
-        %uc = (%uc,
-            "\xA8" => "\xA6", # LATIN LETTER S WITH CARON
-            "\xB8" => "\xB4", # LATIN LETTER Z WITH CARON
-            "\xBD" => "\xBC", # LATIN LIGATURE OE
-            "\xE0" => "\xC0", # LATIN LETTER A WITH GRAVE
-            "\xE1" => "\xC1", # LATIN LETTER A WITH ACUTE
-            "\xE2" => "\xC2", # LATIN LETTER A WITH CIRCUMFLEX
-            "\xE3" => "\xC3", # LATIN LETTER A WITH TILDE
-            "\xE4" => "\xC4", # LATIN LETTER A WITH DIAERESIS
-            "\xE5" => "\xC5", # LATIN LETTER A WITH RING ABOVE
-            "\xE6" => "\xC6", # LATIN LETTER AE
-            "\xE7" => "\xC7", # LATIN LETTER C WITH CEDILLA
-            "\xE8" => "\xC8", # LATIN LETTER E WITH GRAVE
-            "\xE9" => "\xC9", # LATIN LETTER E WITH ACUTE
-            "\xEA" => "\xCA", # LATIN LETTER E WITH CIRCUMFLEX
-            "\xEB" => "\xCB", # LATIN LETTER E WITH DIAERESIS
-            "\xEC" => "\xCC", # LATIN LETTER I WITH GRAVE
-            "\xED" => "\xCD", # LATIN LETTER I WITH ACUTE
-            "\xEE" => "\xCE", # LATIN LETTER I WITH CIRCUMFLEX
-            "\xEF" => "\xCF", # LATIN LETTER I WITH DIAERESIS
-            "\xF0" => "\xD0", # LATIN LETTER ETH
-            "\xF1" => "\xD1", # LATIN LETTER N WITH TILDE
-            "\xF2" => "\xD2", # LATIN LETTER O WITH GRAVE
-            "\xF3" => "\xD3", # LATIN LETTER O WITH ACUTE
-            "\xF4" => "\xD4", # LATIN LETTER O WITH CIRCUMFLEX
-            "\xF5" => "\xD5", # LATIN LETTER O WITH TILDE
-            "\xF6" => "\xD6", # LATIN LETTER O WITH DIAERESIS
-            "\xF8" => "\xD8", # LATIN LETTER O WITH STROKE
-            "\xF9" => "\xD9", # LATIN LETTER U WITH GRAVE
-            "\xFA" => "\xDA", # LATIN LETTER U WITH ACUTE
-            "\xFB" => "\xDB", # LATIN LETTER U WITH CIRCUMFLEX
-            "\xFC" => "\xDC", # LATIN LETTER U WITH DIAERESIS
-            "\xFD" => "\xDD", # LATIN LETTER Y WITH ACUTE
-            "\xFE" => "\xDE", # LATIN LETTER THORN
-            "\xFF" => "\xBE", # LATIN LETTER Y WITH DIAERESIS
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Elatin10 \z/oxms) {
-        %uc = (%uc,
-            "\xA2" => "\xA1", # LATIN LETTER A WITH OGONEK
-            "\xA8" => "\xA6", # LATIN LETTER S WITH CARON
-            "\xAE" => "\xAC", # LATIN LETTER Z WITH ACUTE
-            "\xB3" => "\xA3", # LATIN LETTER L WITH STROKE
-            "\xB8" => "\xB4", # LATIN LETTER Z WITH CARON
-            "\xB9" => "\xB2", # LATIN LETTER C WITH CARON
-            "\xBA" => "\xAA", # LATIN LETTER S WITH COMMA BELOW
-            "\xBD" => "\xBC", # LATIN LIGATURE OE
-            "\xBF" => "\xAF", # LATIN LETTER Z WITH DOT ABOVE
-            "\xE0" => "\xC0", # LATIN LETTER A WITH GRAVE
-            "\xE1" => "\xC1", # LATIN LETTER A WITH ACUTE
-            "\xE2" => "\xC2", # LATIN LETTER A WITH CIRCUMFLEX
-            "\xE3" => "\xC3", # LATIN LETTER A WITH BREVE
-            "\xE4" => "\xC4", # LATIN LETTER A WITH DIAERESIS
-            "\xE5" => "\xC5", # LATIN LETTER C WITH ACUTE
-            "\xE6" => "\xC6", # LATIN LETTER AE
-            "\xE7" => "\xC7", # LATIN LETTER C WITH CEDILLA
-            "\xE8" => "\xC8", # LATIN LETTER E WITH GRAVE
-            "\xE9" => "\xC9", # LATIN LETTER E WITH ACUTE
-            "\xEA" => "\xCA", # LATIN LETTER E WITH CIRCUMFLEX
-            "\xEB" => "\xCB", # LATIN LETTER E WITH DIAERESIS
-            "\xEC" => "\xCC", # LATIN LETTER I WITH GRAVE
-            "\xED" => "\xCD", # LATIN LETTER I WITH ACUTE
-            "\xEE" => "\xCE", # LATIN LETTER I WITH CIRCUMFLEX
-            "\xEF" => "\xCF", # LATIN LETTER I WITH DIAERESIS
-            "\xF0" => "\xD0", # LATIN LETTER D WITH STROKE
-            "\xF1" => "\xD1", # LATIN LETTER N WITH ACUTE
-            "\xF2" => "\xD2", # LATIN LETTER O WITH GRAVE
-            "\xF3" => "\xD3", # LATIN LETTER O WITH ACUTE
-            "\xF4" => "\xD4", # LATIN LETTER O WITH CIRCUMFLEX
-            "\xF5" => "\xD5", # LATIN LETTER O WITH DOUBLE ACUTE
-            "\xF6" => "\xD6", # LATIN LETTER O WITH DIAERESIS
-            "\xF7" => "\xD7", # LATIN LETTER S WITH ACUTE
-            "\xF8" => "\xD8", # LATIN LETTER U WITH DOUBLE ACUTE
-            "\xF9" => "\xD9", # LATIN LETTER U WITH GRAVE
-            "\xFA" => "\xDA", # LATIN LETTER U WITH ACUTE
-            "\xFB" => "\xDB", # LATIN LETTER U WITH CIRCUMFLEX
-            "\xFC" => "\xDC", # LATIN LETTER U WITH DIAERESIS
-            "\xFD" => "\xDD", # LATIN LETTER E WITH OGONEK
-            "\xFE" => "\xDE", # LATIN LETTER T WITH COMMA BELOW
-            "\xFF" => "\xBE", # LATIN LETTER Y WITH DIAERESIS
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Ewindows1252 \z/oxms) {
-        %uc = (%uc,
-            "\x9A" => "\x8A", # LATIN LETTER S WITH CARON
-            "\x9C" => "\x8C", # LATIN LIGATURE OE
-            "\x9E" => "\x8E", # LATIN LETTER Z WITH CARON
-            "\xE0" => "\xC0", # LATIN LETTER A WITH GRAVE
-            "\xE1" => "\xC1", # LATIN LETTER A WITH ACUTE
-            "\xE2" => "\xC2", # LATIN LETTER A WITH CIRCUMFLEX
-            "\xE3" => "\xC3", # LATIN LETTER A WITH TILDE
-            "\xE4" => "\xC4", # LATIN LETTER A WITH DIAERESIS
-            "\xE5" => "\xC5", # LATIN LETTER A WITH RING ABOVE
-            "\xE6" => "\xC6", # LATIN LETTER AE
-            "\xE7" => "\xC7", # LATIN LETTER C WITH CEDILLA
-            "\xE8" => "\xC8", # LATIN LETTER E WITH GRAVE
-            "\xE9" => "\xC9", # LATIN LETTER E WITH ACUTE
-            "\xEA" => "\xCA", # LATIN LETTER E WITH CIRCUMFLEX
-            "\xEB" => "\xCB", # LATIN LETTER E WITH DIAERESIS
-            "\xEC" => "\xCC", # LATIN LETTER I WITH GRAVE
-            "\xED" => "\xCD", # LATIN LETTER I WITH ACUTE
-            "\xEE" => "\xCE", # LATIN LETTER I WITH CIRCUMFLEX
-            "\xEF" => "\xCF", # LATIN LETTER I WITH DIAERESIS
-            "\xF0" => "\xD0", # LATIN LETTER ETH
-            "\xF1" => "\xD1", # LATIN LETTER N WITH TILDE
-            "\xF2" => "\xD2", # LATIN LETTER O WITH GRAVE
-            "\xF3" => "\xD3", # LATIN LETTER O WITH ACUTE
-            "\xF4" => "\xD4", # LATIN LETTER O WITH CIRCUMFLEX
-            "\xF5" => "\xD5", # LATIN LETTER O WITH TILDE
-            "\xF6" => "\xD6", # LATIN LETTER O WITH DIAERESIS
-            "\xF8" => "\xD8", # LATIN LETTER O WITH STROKE
-            "\xF9" => "\xD9", # LATIN LETTER U WITH GRAVE
-            "\xFA" => "\xDA", # LATIN LETTER U WITH ACUTE
-            "\xFB" => "\xDB", # LATIN LETTER U WITH CIRCUMFLEX
-            "\xFC" => "\xDC", # LATIN LETTER U WITH DIAERESIS
-            "\xFD" => "\xDD", # LATIN LETTER Y WITH ACUTE
-            "\xFE" => "\xDE", # LATIN LETTER THORN
-            "\xFF" => "\x9F", # LATIN LETTER Y WITH DIAERESIS
-        );
-    }
-
-    elsif (__PACKAGE__ =~ m/ \b Ewindows1258 \z/oxms) {
-        %uc = (%uc,
-            "\x9C" => "\x8C", # LATIN LIGATURE OE
-            "\xFF" => "\x9F", # LATIN LETTER Y WITH DIAERESIS
-            "\xE0" => "\xC0", # LATIN LETTER A WITH GRAVE
-            "\xE1" => "\xC1", # LATIN LETTER A WITH ACUTE
-            "\xE2" => "\xC2", # LATIN LETTER A WITH CIRCUMFLEX
-            "\xE3" => "\xC3", # LATIN LETTER A WITH BREVE
-            "\xE4" => "\xC4", # LATIN LETTER A WITH DIAERESIS
-            "\xE5" => "\xC5", # LATIN LETTER A WITH RING ABOVE
-            "\xE6" => "\xC6", # LATIN LETTER AE
-            "\xE7" => "\xC7", # LATIN LETTER C WITH CEDILLA
-            "\xE8" => "\xC8", # LATIN LETTER E WITH GRAVE
-            "\xE9" => "\xC9", # LATIN LETTER E WITH ACUTE
-            "\xEA" => "\xCA", # LATIN LETTER E WITH CIRCUMFLEX
-            "\xEB" => "\xCB", # LATIN LETTER E WITH DIAERESIS
-            "\xED" => "\xCD", # LATIN LETTER I WITH ACUTE
-            "\xEE" => "\xCE", # LATIN LETTER I WITH CIRCUMFLEX
-            "\xEF" => "\xCF", # LATIN LETTER I WITH DIAERESIS
-            "\xF0" => "\xD0", # LATIN LETTER D WITH STROKE
-            "\xF1" => "\xD1", # LATIN LETTER N WITH TILDE
-            "\xF3" => "\xD3", # LATIN LETTER O WITH ACUTE
-            "\xF4" => "\xD4", # LATIN LETTER O WITH CIRCUMFLEX
-            "\xF5" => "\xD5", # LATIN LETTER O WITH HORN
-            "\xF6" => "\xD6", # LATIN LETTER O WITH DIAERESIS
-            "\xF8" => "\xD8", # LATIN LETTER O WITH STROKE
-            "\xF9" => "\xD9", # LATIN LETTER U WITH GRAVE
-            "\xFA" => "\xDA", # LATIN LETTER U WITH ACUTE
-            "\xFB" => "\xDB", # LATIN LETTER U WITH CIRCUMFLEX
-            "\xFC" => "\xDC", # LATIN LETTER U WITH DIAERESIS
-            "\xFD" => "\xDD", # LATIN LETTER U WITH HORN
-        );
-    }
-
-    # upper case first with parameter
-    sub Egbk::ucfirst(@) {
-        if (@_) {
-            my $s = shift @_;
-            if (@_ and wantarray) {
-                return Egbk::uc(CORE::substr($s,0,1)) . CORE::substr($s,1), @_;
-            }
-            else {
-                return Egbk::uc(CORE::substr($s,0,1)) . CORE::substr($s,1);
-            }
+#
+# GBK lower case with parameter
+#
+sub Egbk::lc(@) {
+    if (@_) {
+        my $s = shift @_;
+        if (@_ and wantarray) {
+            return join('', map {defined($lc{$_}) ? $lc{$_} : $_} ($s =~ m/\G ($q_char) /oxmsg)), @_;
         }
         else {
-            return Egbk::uc(CORE::substr($_,0,1)) . CORE::substr($_,1);
+            return join('', map {defined($lc{$_}) ? $lc{$_} : $_} ($s =~ m/\G ($q_char) /oxmsg));
         }
     }
+    else {
+        return Egbk::lc_();
+    }
+}
 
-    # upper case first without parameter
-    sub Egbk::ucfirst_() {
+#
+# GBK lower case without parameter
+#
+sub Egbk::lc_() {
+    my $s = $_;
+    return join '', map {defined($lc{$_}) ? $lc{$_} : $_} ($s =~ m/\G ($q_char) /oxmsg);
+}
+
+#
+# GBK upper case first with parameter
+#
+sub Egbk::ucfirst(@) {
+    if (@_) {
+        my $s = shift @_;
+        if (@_ and wantarray) {
+            return Egbk::uc(CORE::substr($s,0,1)) . CORE::substr($s,1), @_;
+        }
+        else {
+            return Egbk::uc(CORE::substr($s,0,1)) . CORE::substr($s,1);
+        }
+    }
+    else {
         return Egbk::uc(CORE::substr($_,0,1)) . CORE::substr($_,1);
     }
+}
 
-    # upper case with parameter
-    sub Egbk::uc(@) {
-        if (@_) {
-            my $s = shift @_;
-            if (@_ and wantarray) {
-                return join('', map {defined($uc{$_}) ? $uc{$_} : $_} ($s =~ m/\G ($q_char) /oxmsg)), @_;
-            }
-            else {
-                return join('', map {defined($uc{$_}) ? $uc{$_} : $_} ($s =~ m/\G ($q_char) /oxmsg));
-            }
+#
+# GBK upper case first without parameter
+#
+sub Egbk::ucfirst_() {
+    return Egbk::uc(CORE::substr($_,0,1)) . CORE::substr($_,1);
+}
+
+#
+# GBK upper case with parameter
+#
+sub Egbk::uc(@) {
+    if (@_) {
+        my $s = shift @_;
+        if (@_ and wantarray) {
+            return join('', map {defined($uc{$_}) ? $uc{$_} : $_} ($s =~ m/\G ($q_char) /oxmsg)), @_;
         }
         else {
-            return Egbk::uc_();
+            return join('', map {defined($uc{$_}) ? $uc{$_} : $_} ($s =~ m/\G ($q_char) /oxmsg));
         }
     }
-
-    # upper case without parameter
-    sub Egbk::uc_() {
-        my $s = $_;
-        return join '', map {defined($uc{$_}) ? $uc{$_} : $_} ($s =~ m/\G ($q_char) /oxmsg);
+    else {
+        return Egbk::uc_();
     }
+}
+
+#
+# GBK upper case without parameter
+#
+sub Egbk::uc_() {
+    my $s = $_;
+    return join '', map {defined($uc{$_}) ? $uc{$_} : $_} ($s =~ m/\G ($q_char) /oxmsg);
+}
+
+#
+# GBK fold case with parameter
+#
+sub Egbk::fc(@) {
+    if (@_) {
+        my $s = shift @_;
+        if (@_ and wantarray) {
+            return join('', map {defined($fc{$_}) ? $fc{$_} : $_} ($s =~ m/\G ($q_char) /oxmsg)), @_;
+        }
+        else {
+            return join('', map {defined($fc{$_}) ? $fc{$_} : $_} ($s =~ m/\G ($q_char) /oxmsg));
+        }
+    }
+    else {
+        return Egbk::fc_();
+    }
+}
+
+#
+# GBK fold case lower case without parameter
+#
+sub Egbk::fc_() {
+    my $s = $_;
+    return join '', map {defined($fc{$_}) ? $fc{$_} : $_} ($s =~ m/\G ($q_char) /oxmsg);
 }
 
 #
@@ -2414,17 +879,15 @@ sub Egbk::rindex($$;$) {
         return $_[0];
     }
 
-    # GBK regexp mark last m// or qr// matched
+    # GBK mark last regexp matched
     sub Egbk::matched() {
         $last_s_matched = 0;
     }
 
-    # GBK regexp mark last s/// or qr matched
+    # GBK mark last s/// matched
     sub Egbk::s_matched() {
         $last_s_matched = 1;
     }
-
-    # which matched of m// or s/// at last
 
     # P.854 31.17. use re
     # in Chapter 31. Pragmatic Modules
@@ -2470,7 +933,7 @@ sub Egbk::ignorecase(@) {
 
                 while (1) {
                     if (++$i > $#char) {
-                        croak "$0: unmatched [] in regexp";
+                        croak "Unmatched [] in regexp";
                     }
                     if ($char[$i] eq ']') {
                         my $right = $i;
@@ -2509,7 +972,7 @@ sub Egbk::ignorecase(@) {
 
                 while (1) {
                     if (++$i > $#char) {
-                        croak "$0: unmatched [] in regexp";
+                        croak "Unmatched [] in regexp";
                     }
                     if ($char[$i] eq ']') {
                         my $right = $i;
@@ -2544,9 +1007,14 @@ sub Egbk::ignorecase(@) {
             # /i modifier
             elsif ($char[$i] =~ m/\A [\x00-\xFF] \z/oxms) {
                 my $uc = Egbk::uc($char[$i]);
-                my $lc = Egbk::lc($char[$i]);
-                if ($uc ne $lc) {
-                    $char[$i] = '[' . $uc . $lc . ']';
+                my $fc = Egbk::fc($char[$i]);
+                if ($uc ne $fc) {
+                    if (CORE::length($fc) == 1) {
+                        $char[$i] = '['   . $uc       . $fc . ']';
+                    }
+                    else {
+                        $char[$i] = '(?:' . $uc . '|' . $fc . ')';
+                    }
                 }
             }
         }
@@ -2598,6 +1066,17 @@ sub classic_character_class($) {
         # in Chapter 7: In the World of Regular Expressions
         # of ISBN 978-0-596-52010-6 Learning Perl, Fifth Edition
 
+        # P.357 13.2.3 Whitespace
+        # in Chapter 13: perlrecharclass: Perl Regular Expression Character Classes
+        # of ISBN-13: 978-1-906966-02-7 The Perl Language Reference Manual (for Perl version 5.12.1)
+        #
+        # 0x00009   CHARACTER TABULATION  h s
+        # 0x0000a         LINE FEED (LF)   vs
+        # 0x0000b        LINE TABULATION   v
+        # 0x0000c         FORM FEED (FF)   vs
+        # 0x0000d   CARRIAGE RETURN (CR)   vs
+        # 0x00020                  SPACE  h s
+
         # P.196 Table 5-9. Alphanumeric regex metasymbols
         # in Chapter 5. Pattern Matching
         # of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
@@ -2607,7 +1086,7 @@ sub classic_character_class($) {
         '\H' => '@{Egbk::eH}',
         '\V' => '@{Egbk::eV}',
         '\h' => '[\x09\x20]',
-        '\v' => '[\x0C\x0A\x0D]',
+        '\v' => '[\x0A\x0B\x0C\x0D]',
         '\R' => '@{Egbk::eR}',
 
         # \N
@@ -2620,9 +1099,9 @@ sub classic_character_class($) {
 
         # \b \B
 
-        # P.131 Word boundaries: \b, \B, \<, \>, ...
-        # in Chapter 3: Overview of Regular Expression Features and Flavors
-        # of ISBN 0-596-00289-0 Mastering Regular Expressions, Second edition
+        # P.180 Boundaries: The \b and \B Assertions
+        # in Chapter 5: Pattern Matching
+        # of ISBN 0-596-00027-8 Programming Perl Third Edition.
 
         # P.219 Boundaries: The \b and \B Assertions
         # in Chapter 5: Pattern Matching
@@ -2803,7 +1282,7 @@ sub _charlist_tr {
 
         # range error
         if ((length($char[$i-1]) > length($char[$i+1])) or ($char[$i-1] gt $char[$i+1])) {
-            croak "$0: invalid [] range \"\\x" . unpack('H*',$char[$i-1]) . '-\\x' . unpack('H*',$char[$i+1]) . '" in regexp';
+            croak "Invalid [] range \"\\x" . unpack('H*',$char[$i-1]) . '-\\x' . unpack('H*',$char[$i+1]) . '" in regexp';
         }
 
         # range of multiple-octet code
@@ -3083,7 +1562,7 @@ sub _charlist {
                 '\H' => '@{Egbk::eH}',
                 '\V' => '@{Egbk::eV}',
                 '\h' => '[\x09\x20]',
-                '\v' => '[\x0C\x0A\x0D]',
+                '\v' => '[\x0A\x0B\x0C\x0D]',
                 '\R' => '@{Egbk::eR}',
 
             }->{$1};
@@ -3153,7 +1632,7 @@ sub _charlist {
 
             # range error
             if ((length($char[$i-1]) > length($char[$i+1])) or ($char[$i-1] gt $char[$i+1])) {
-                croak "$0: invalid [] range \"\\x" . unpack('H*',$char[$i-1]) . '-\\x' . unpack('H*',$char[$i+1]) . '" in regexp';
+                croak "Invalid [] range \"\\x" . unpack('H*',$char[$i-1]) . '-\\x' . unpack('H*',$char[$i+1]) . '" in regexp';
             }
 
             # range of single octet code and not ignore case
@@ -3217,7 +1696,7 @@ sub _charlist {
                 }
             }
             else {
-                croak "$0: invalid [] range \"\\x" . unpack('H*',$char[$i-1]) . '-\\x' . unpack('H*',$char[$i+1]) . '" in regexp';
+                croak "Invalid [] range \"\\x" . unpack('H*',$char[$i-1]) . '-\\x' . unpack('H*',$char[$i+1]) . '" in regexp';
             }
 
             $i += 2;
@@ -3227,9 +1706,15 @@ sub _charlist {
         elsif ($char[$i] =~ m/\A [\x00-\xFF] \z/oxms) {
             if ($modifier =~ m/i/oxms) {
                 my $uc = Egbk::uc($char[$i]);
-                my $lc = Egbk::lc($char[$i]);
-                if ($uc ne $lc) {
-                    push @singleoctet, $uc, $lc;
+                my $fc = Egbk::fc($char[$i]);
+                if ($uc ne $fc) {
+                    if (CORE::length($fc) == 1) {
+                        push @singleoctet, $uc, $fc;
+                    }
+                    else {
+                        push @singleoctet, $uc;
+                        push @charlist,    $fc;
+                    }
                 }
                 else {
                     push @singleoctet, $char[$i];
@@ -3247,7 +1732,7 @@ sub _charlist {
             $i += 1;
         }
         elsif ($char[$i] =~ m/\A (?: \\v ) \z/oxms) {
-            push @singleoctet, "\f","\n","\r";
+            push @singleoctet, "\x0A", "\x0B", "\x0C", "\x0D";
             $i += 1;
         }
         elsif ($char[$i] =~ m/\A (?: \\d | \\s | \\w ) \z/oxms) {
@@ -3484,9 +1969,14 @@ sub Egbk::r(;*@) {
     # P.908 32.39. Symbol
     # in Chapter 32: Standard Modules
     # of ISBN 0-596-00027-8 Programming Perl Third Edition.
+
+    # P.326 Prototypes
+    # in Chapter 7: Subroutines
+    # of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
+
     # (and so on)
 
-    elsif (fileno(my $fh = qualify_to_ref $_)) {
+    elsif (defined fileno(my $fh = qualify_to_ref $_)) {
         return wantarray ? (-r $fh,@_) : -r $fh;
     }
     elsif (-e $_) {
@@ -3519,7 +2009,7 @@ sub Egbk::w(;*@) {
     if ($_ eq '_') {
         return wantarray ? (-w _,@_) : -w _;
     }
-    elsif (fileno(my $fh = qualify_to_ref $_)) {
+    elsif (defined fileno(my $fh = qualify_to_ref $_)) {
         return wantarray ? (-w $fh,@_) : -w $fh;
     }
     elsif (-e $_) {
@@ -3552,7 +2042,7 @@ sub Egbk::x(;*@) {
     if ($_ eq '_') {
         return wantarray ? (-x _,@_) : -x _;
     }
-    elsif (fileno(my $fh = qualify_to_ref $_)) {
+    elsif (defined fileno(my $fh = qualify_to_ref $_)) {
         return wantarray ? (-x $fh,@_) : -x $fh;
     }
     elsif (-e $_) {
@@ -3587,7 +2077,7 @@ sub Egbk::o(;*@) {
     if ($_ eq '_') {
         return wantarray ? (-o _,@_) : -o _;
     }
-    elsif (fileno(my $fh = qualify_to_ref $_)) {
+    elsif (defined fileno(my $fh = qualify_to_ref $_)) {
         return wantarray ? (-o $fh,@_) : -o $fh;
     }
     elsif (-e $_) {
@@ -3620,7 +2110,7 @@ sub Egbk::R(;*@) {
     if ($_ eq '_') {
         return wantarray ? (-R _,@_) : -R _;
     }
-    elsif (fileno(my $fh = qualify_to_ref $_)) {
+    elsif (defined fileno(my $fh = qualify_to_ref $_)) {
         return wantarray ? (-R $fh,@_) : -R $fh;
     }
     elsif (-e $_) {
@@ -3653,7 +2143,7 @@ sub Egbk::W(;*@) {
     if ($_ eq '_') {
         return wantarray ? (-W _,@_) : -W _;
     }
-    elsif (fileno(my $fh = qualify_to_ref $_)) {
+    elsif (defined fileno(my $fh = qualify_to_ref $_)) {
         return wantarray ? (-W $fh,@_) : -W $fh;
     }
     elsif (-e $_) {
@@ -3686,7 +2176,7 @@ sub Egbk::X(;*@) {
     if ($_ eq '_') {
         return wantarray ? (-X _,@_) : -X _;
     }
-    elsif (fileno(my $fh = qualify_to_ref $_)) {
+    elsif (defined fileno(my $fh = qualify_to_ref $_)) {
         return wantarray ? (-X $fh,@_) : -X $fh;
     }
     elsif (-e $_) {
@@ -3721,7 +2211,7 @@ sub Egbk::O(;*@) {
     if ($_ eq '_') {
         return wantarray ? (-O _,@_) : -O _;
     }
-    elsif (fileno(my $fh = qualify_to_ref $_)) {
+    elsif (defined fileno(my $fh = qualify_to_ref $_)) {
         return wantarray ? (-O $fh,@_) : -O $fh;
     }
     elsif (-e $_) {
@@ -3764,7 +2254,7 @@ sub Egbk::e(;*@) {
     }
 
     # return true if file handle
-    elsif (fileno $fh) {
+    elsif (defined fileno $fh) {
         return wantarray ? (1,@_) : 1;
     }
 
@@ -3798,7 +2288,7 @@ sub Egbk::z(;*@) {
     if ($_ eq '_') {
         return wantarray ? (-z _,@_) : -z _;
     }
-    elsif (fileno(my $fh = qualify_to_ref $_)) {
+    elsif (defined fileno(my $fh = qualify_to_ref $_)) {
         return wantarray ? (-z $fh,@_) : -z $fh;
     }
     elsif (-e $_) {
@@ -3831,7 +2321,7 @@ sub Egbk::s(;*@) {
     if ($_ eq '_') {
         return wantarray ? (-s _,@_) : -s _;
     }
-    elsif (fileno(my $fh = qualify_to_ref $_)) {
+    elsif (defined fileno(my $fh = qualify_to_ref $_)) {
         return wantarray ? (-s $fh,@_) : -s $fh;
     }
     elsif (-e $_) {
@@ -3864,7 +2354,7 @@ sub Egbk::f(;*@) {
     if ($_ eq '_') {
         return wantarray ? (-f _,@_) : -f _;
     }
-    elsif (fileno(my $fh = qualify_to_ref $_)) {
+    elsif (defined fileno(my $fh = qualify_to_ref $_)) {
         return wantarray ? (-f $fh,@_) : -f $fh;
     }
     elsif (-e $_) {
@@ -3899,7 +2389,7 @@ sub Egbk::d(;*@) {
     }
 
     # return false if file handle or directory handle
-    elsif (fileno(my $fh = qualify_to_ref $_)) {
+    elsif (defined fileno(my $fh = qualify_to_ref $_)) {
         return wantarray ? ('',@_) : '';
     }
     elsif (-e $_) {
@@ -3922,7 +2412,7 @@ sub Egbk::l(;*@) {
     if ($_ eq '_') {
         return wantarray ? (-l _,@_) : -l _;
     }
-    elsif (fileno(my $fh = qualify_to_ref $_)) {
+    elsif (defined fileno(my $fh = qualify_to_ref $_)) {
         return wantarray ? (-l $fh,@_) : -l $fh;
     }
     elsif (-e $_) {
@@ -3955,7 +2445,7 @@ sub Egbk::p(;*@) {
     if ($_ eq '_') {
         return wantarray ? (-p _,@_) : -p _;
     }
-    elsif (fileno(my $fh = qualify_to_ref $_)) {
+    elsif (defined fileno(my $fh = qualify_to_ref $_)) {
         return wantarray ? (-p $fh,@_) : -p $fh;
     }
     elsif (-e $_) {
@@ -3988,7 +2478,7 @@ sub Egbk::S(;*@) {
     if ($_ eq '_') {
         return wantarray ? (-S _,@_) : -S _;
     }
-    elsif (fileno(my $fh = qualify_to_ref $_)) {
+    elsif (defined fileno(my $fh = qualify_to_ref $_)) {
         return wantarray ? (-S $fh,@_) : -S $fh;
     }
     elsif (-e $_) {
@@ -4021,7 +2511,7 @@ sub Egbk::b(;*@) {
     if ($_ eq '_') {
         return wantarray ? (-b _,@_) : -b _;
     }
-    elsif (fileno(my $fh = qualify_to_ref $_)) {
+    elsif (defined fileno(my $fh = qualify_to_ref $_)) {
         return wantarray ? (-b $fh,@_) : -b $fh;
     }
     elsif (-e $_) {
@@ -4054,7 +2544,7 @@ sub Egbk::c(;*@) {
     if ($_ eq '_') {
         return wantarray ? (-c _,@_) : -c _;
     }
-    elsif (fileno(my $fh = qualify_to_ref $_)) {
+    elsif (defined fileno(my $fh = qualify_to_ref $_)) {
         return wantarray ? (-c $fh,@_) : -c $fh;
     }
     elsif (-e $_) {
@@ -4087,7 +2577,7 @@ sub Egbk::u(;*@) {
     if ($_ eq '_') {
         return wantarray ? (-u _,@_) : -u _;
     }
-    elsif (fileno(my $fh = qualify_to_ref $_)) {
+    elsif (defined fileno(my $fh = qualify_to_ref $_)) {
         return wantarray ? (-u $fh,@_) : -u $fh;
     }
     elsif (-e $_) {
@@ -4120,7 +2610,7 @@ sub Egbk::g(;*@) {
     if ($_ eq '_') {
         return wantarray ? (-g _,@_) : -g _;
     }
-    elsif (fileno(my $fh = qualify_to_ref $_)) {
+    elsif (defined fileno(my $fh = qualify_to_ref $_)) {
         return wantarray ? (-g $fh,@_) : -g $fh;
     }
     elsif (-e $_) {
@@ -4153,7 +2643,7 @@ sub Egbk::k(;*@) {
     if ($_ eq '_') {
         return wantarray ? ('',@_) : '';
     }
-    elsif (fileno(my $fh = qualify_to_ref $_)) {
+    elsif (defined fileno(my $fh = qualify_to_ref $_)) {
         return wantarray ? ('',@_) : '';
     }
     elsif ($] =~ m/^5\.008/oxms) {
@@ -4168,11 +2658,20 @@ sub Egbk::k(;*@) {
 sub Egbk::T(;*@) {
 
     local $_ = shift if @_;
-    croak 'Too many arguments for -T (Egbk::T)' if @_ and not wantarray;
+
+    # Use of croak without parentheses makes die on Strawberry Perl 5.008 and 5.010, like:
+    #     croak 'Too many arguments for -T (Egbk::T)';
+    # Must be used by parentheses like:
+    #     croak('Too many arguments for -T (Egbk::T)');
+
+    if (@_ and not wantarray) {
+        croak('Too many arguments for -T (Egbk::T)');
+    }
+
     my $T = 1;
 
     my $fh = qualify_to_ref $_;
-    if (fileno $fh) {
+    if (defined fileno $fh) {
 
         if (defined Egbk::telldir($fh)) {
             return wantarray ? (undef,@_) : undef;
@@ -4209,6 +2708,7 @@ sub Egbk::T(;*@) {
             $T = 1;
         }
 
+        my $dummy_for_underline_cache = -T $fh;
         sysseek $fh, $systell, 0;
     }
     else {
@@ -4233,10 +2733,10 @@ sub Egbk::T(;*@) {
         else {
             $T = 1;
         }
+        my $dummy_for_underline_cache = -T $fh;
         close $fh;
     }
 
-    my $dummy_for_underline_cache = -T $_;
     return wantarray ? ($T,@_) : $T;
 }
 
@@ -4250,7 +2750,7 @@ sub Egbk::B(;*@) {
     my $B = '';
 
     my $fh = qualify_to_ref $_;
-    if (fileno $fh) {
+    if (defined fileno $fh) {
 
         if (defined Egbk::telldir($fh)) {
             return wantarray ? (undef,@_) : undef;
@@ -4272,6 +2772,7 @@ sub Egbk::B(;*@) {
             $B = 1;
         }
 
+        my $dummy_for_underline_cache = -B $fh;
         sysseek $fh, $systell, 0;
     }
     else {
@@ -4296,10 +2797,10 @@ sub Egbk::B(;*@) {
         else {
             $B = 1;
         }
+        my $dummy_for_underline_cache = -B $fh;
         close $fh;
     }
 
-    my $dummy_for_underline_cache = -B $_;
     return wantarray ? ($B,@_) : $B;
 }
 
@@ -4314,7 +2815,7 @@ sub Egbk::M(;*@) {
     if ($_ eq '_') {
         return wantarray ? (-M _,@_) : -M _;
     }
-    elsif (fileno(my $fh = qualify_to_ref $_)) {
+    elsif (defined fileno(my $fh = qualify_to_ref $_)) {
         return wantarray ? (-M $fh,@_) : -M $fh;
     }
     elsif (-e $_) {
@@ -4348,7 +2849,7 @@ sub Egbk::A(;*@) {
     if ($_ eq '_') {
         return wantarray ? (-A _,@_) : -A _;
     }
-    elsif (fileno(my $fh = qualify_to_ref $_)) {
+    elsif (defined fileno(my $fh = qualify_to_ref $_)) {
         return wantarray ? (-A $fh,@_) : -A $fh;
     }
     elsif (-e $_) {
@@ -4382,7 +2883,7 @@ sub Egbk::C(;*@) {
     if ($_ eq '_') {
         return wantarray ? (-C _,@_) : -C _;
     }
-    elsif (fileno(my $fh = qualify_to_ref $_)) {
+    elsif (defined fileno(my $fh = qualify_to_ref $_)) {
         return wantarray ? (-C $fh,@_) : -C $fh;
     }
     elsif (-e $_) {
@@ -4936,9 +3437,9 @@ sub Egbk::T_() {
     else {
         $T = 1;
     }
+    my $dummy_for_underline_cache = -T $fh;
     close $fh;
 
-    my $dummy_for_underline_cache = -T $_;
     return $T;
 }
 
@@ -4970,9 +3471,9 @@ sub Egbk::B_() {
     else {
         $B = 1;
     }
+    my $dummy_for_underline_cache = -B $fh;
     close $fh;
 
-    my $dummy_for_underline_cache = -B $_;
     return $B;
 }
 
@@ -5056,7 +3557,18 @@ sub Egbk::C_() {
 #
 sub Egbk::glob($) {
 
-    return _dosglob(@_);
+    if (wantarray) {
+        my @glob = _dosglob(@_);
+        for my $glob (@glob) {
+            $glob =~ s{ \A (?:\./)+ }{}oxms;
+        }
+        return @glob;
+    }
+    else {
+        my $glob = _dosglob(@_);
+        $glob =~ s{ \A (?:\./)+ }{}oxms;
+        return $glob;
+    }
 }
 
 #
@@ -5064,7 +3576,18 @@ sub Egbk::glob($) {
 #
 sub Egbk::glob_() {
 
-    return _dosglob();
+    if (wantarray) {
+        my @glob = _dosglob();
+        for my $glob (@glob) {
+            $glob =~ s{ \A (?:\./)+ }{}oxms;
+        }
+        return @glob;
+    }
+    else {
+        my $glob = _dosglob();
+        $glob =~ s{ \A (?:\./)+ }{}oxms;
+        return $glob;
+    }
 }
 
 #
@@ -5230,14 +3753,14 @@ OUTER:
                 $pattern .= "(?:$your_char)?",  # DOS style
 #               $pattern .= "(?:$your_char)",   # UNIX style
             }
-            elsif ((my $uc = Egbk::uc($char)) ne $char) {
-                $pattern .= $uc;
+            elsif ((my $fc = Egbk::fc($char)) ne $char) {
+                $pattern .= $fc;
             }
             else {
                 $pattern .= quotemeta $char;
             }
         }
-        my $matchsub = sub { Egbk::uc($_[0]) =~ m{\A $pattern \z}xms };
+        my $matchsub = sub { Egbk::fc($_[0]) =~ m{\A $pattern \z}xms };
 
 #       if ($@) {
 #           print STDERR "$0: $@\n";
@@ -5334,10 +3857,19 @@ sub Egbk::lstat(*) {
     }
     elsif (_MSWin32_5Cended_path($_)) {
         my $fh = gensym();
-        if (open $fh, $_) {
-            my @lstat = CORE::stat $fh; # not CORE::lstat
-            close $fh;
-            return @lstat;
+        if (wantarray) {
+            if (open $fh, $_) {
+                my @lstat = CORE::stat $fh; # not CORE::lstat
+                close $fh;
+                return @lstat;
+            }
+        }
+        else {
+            if (open $fh, $_) {
+                my $lstat = CORE::stat $fh; # not CORE::lstat
+                close $fh;
+                return $lstat;
+            }
         }
     }
     return;
@@ -5353,10 +3885,19 @@ sub Egbk::lstat_() {
     }
     elsif (_MSWin32_5Cended_path($_)) {
         my $fh = gensym();
-        if (open $fh, $_) {
-            my @lstat = CORE::stat $fh; # not CORE::lstat
-            close $fh;
-            return @lstat;
+        if (wantarray) {
+            if (open $fh, $_) {
+                my @lstat = CORE::stat $fh; # not CORE::lstat
+                close $fh;
+                return @lstat;
+            }
+        }
+        else {
+            if (open $fh, $_) {
+                my $lstat = CORE::stat $fh; # not CORE::lstat
+                close $fh;
+                return $lstat;
+            }
         }
     }
     return;
@@ -5387,7 +3928,7 @@ sub Egbk::stat(*) {
     local $_ = shift if @_;
 
     my $fh = qualify_to_ref $_;
-    if (fileno $fh) {
+    if (defined fileno $fh) {
         return CORE::stat $fh;
     }
     elsif (-e $_) {
@@ -5395,10 +3936,19 @@ sub Egbk::stat(*) {
     }
     elsif (_MSWin32_5Cended_path($_)) {
         my $fh = gensym();
-        if (open $fh, $_) {
-            my @stat = CORE::stat $fh;
-            close $fh;
-            return @stat;
+        if (wantarray) {
+            if (open $fh, $_) {
+                my @stat = CORE::stat $fh;
+                close $fh;
+                return @stat;
+            }
+        }
+        else {
+            if (open $fh, $_) {
+                my $stat = CORE::stat $fh;
+                close $fh;
+                return $stat;
+            }
         }
     }
     return;
@@ -5410,7 +3960,7 @@ sub Egbk::stat(*) {
 sub Egbk::stat_() {
 
     my $fh = qualify_to_ref $_;
-    if (fileno $fh) {
+    if (defined fileno $fh) {
         return CORE::stat $fh;
     }
     elsif (-e $_) {
@@ -5418,10 +3968,19 @@ sub Egbk::stat_() {
     }
     elsif (_MSWin32_5Cended_path($_)) {
         my $fh = gensym();
-        if (open $fh, $_) {
-            my @stat = CORE::stat $fh;
-            close $fh;
-            return @stat;
+        if (wantarray) {
+            if (open $fh, $_) {
+                my @stat = CORE::stat $fh;
+                close $fh;
+                return @stat;
+            }
+        }
+        else {
+            if (open $fh, $_) {
+                my $stat = CORE::stat $fh;
+                close $fh;
+                return $stat;
+            }
         }
     }
     return;
@@ -5441,14 +4000,14 @@ sub Egbk::unlink(@) {
         }
         elsif (Egbk::d($_)) {
         }
-        elsif (_MSWin32_5Cended_path($_) and ($ENV{'ComSpec'} =~ / (?: COMMAND\.COM | CMD\.EXE ) \z /oxmsi)) {
+        elsif (_MSWin32_5Cended_path($_)) {
             my @char = m/\G ($q_char) /oxmsg;
             my $file = join '', map {{'/' => '\\'}->{$_} || $_} @char;
             if ($file =~ m/ \A (?:$q_char)*? [ ] /oxms) {
                 $file = qq{"$file"};
             }
 
-            system $ENV{'ComSpec'}, '/C', 'del', $file, '2>NUL';
+            system 'del', $file, '2>NUL';
 
             my $fh = gensym();
             if (open $fh, $_) {
@@ -5523,7 +4082,7 @@ sub Egbk::chdir(;$) {
                 pop @char;
             }
             $dir = join '', @char;
-            croak "perl$] can't chdir to $dir (chr(0x5C) ended path), Win32.pm module may help you";
+            croak "Perl$] can't chdir to $dir (chr(0x5C) ended path), Win32.pm module may help you";
         }
         elsif ($shortdir eq $dir) {
             my @char = $dir =~ m/\G ($q_char) /oxmsg;
@@ -5531,7 +4090,7 @@ sub Egbk::chdir(;$) {
                 pop @char;
             }
             $dir = join '', @char;
-            croak "perl$] can't chdir to $dir (chr(0x5C) ended path)";
+            croak "Perl$] can't chdir to $dir (chr(0x5C) ended path)";
         }
         return $chdir;
     }
@@ -5599,14 +4158,19 @@ ITER_DO:
                         }
                         elsif (exists $ENV{'SJIS_NONBLOCK'}) {
 
-                            # 7.18. Locking a File
-                            # in Chapter 7. File Access
-                            # of ISBN 0-596-00313-7 Perl Cookbook, 2nd Edition.
+                            # P.419 File Locking
+                            # in Chapter 16: Interprocess Communication
+                            # of ISBN 0-596-00027-8 Programming Perl Third Edition.
+
+                            # P.524 File Locking
+                            # in Chapter 15: Interprocess Communication
+                            # of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
+
                             # (and so on)
 
                             eval q{
                                 unless (flock($fh, LOCK_SH | LOCK_NB)) {
-                                    carp "$__FILE__: Can't immediately read-lock the file: $realfilename.e";
+                                    carp "Can't immediately read-lock the file: $realfilename.e";
                                     exit;
                                 }
                             };
@@ -5648,7 +4212,7 @@ ITER_DO:
                             elsif (exists $ENV{'SJIS_NONBLOCK'}) {
                                 eval q{
                                     unless (flock($fh, LOCK_EX | LOCK_NB)) {
-                                        carp "$__FILE__: Can't immediately write-lock the file: $realfilename.e";
+                                        carp "Can't immediately write-lock the file: $realfilename.e";
                                         exit;
                                     }
                                 };
@@ -5656,8 +4220,8 @@ ITER_DO:
                             else {
                                 eval q{ flock($fh, LOCK_EX) };
                             }
-                            truncate($fh, 0) or croak "$__FILE__: Can't truncate file: $realfilename.e";
-                            seek($fh, 0, 0)  or croak "$__FILE__: Can't seek file: $realfilename.e";
+                            truncate($fh, 0) or croak "Can't truncate file: $realfilename.e";
+                            seek($fh, 0, 0)  or croak "Can't seek file: $realfilename.e";
                             print {$fh} $script;
                             if ($^O eq 'MacOS') {
                                 eval q{
@@ -5670,16 +4234,28 @@ ITER_DO:
                     }
                 }
 
-                no strict;
+                if (eval {CORE::require strict}) {
+                    strict::->unimport;
+                }
                 local $@;
-                $result = eval $script;
+                $result = scalar eval $script;
 
                 last ITER_DO;
             }
         }
     }
-    $INC{$filename} = $realfilename;
-    return $result;
+
+    if ($@) {
+        $INC{$filename} = undef;
+        return;
+    }
+    elsif (not $result) {
+        return;
+    }
+    else {
+        $INC{$filename} = $realfilename;
+        return $result;
+    }
 }
 
 #
@@ -5694,7 +4270,7 @@ ITER_DO:
 #     my($filename) = @_;
 #     return 1 if $INC{$filename};
 #     my($realfilename, $result);
-#     ITER:{
+#     ITER: {
 #         foreach $prefix (@INC) {
 #             $realfilename = "$prefix/$filename";
 #             if (-f $realfilename) {
@@ -5710,10 +4286,49 @@ ITER_DO:
 #     return $result;
 # }
 
+# require
+# in Chapter 9: perlfunc: Perl builtin functions
+# of ISBN-13: 978-1-906966-02-7 The Perl Language Reference Manual (for Perl version 5.12.1)
+#
+# sub require {
+#     my($filename) = @_;
+#     if (exists $INC{$filename}) {
+#         return 1 if $INC{$filename};
+#         die "Compilation failed in require";
+#     }
+#     my($realfilename, $result);
+#     ITER: {
+#         foreach $prefix (@INC) {
+#             $realfilename = "$prefix/$filename";
+#             if (-f $realfilename) {
+#                 $INC{$filename} = $realfilename;
+#                 $result = do $realfilename;
+#                 last ITER;
+#             }
+#         }
+#         die "Can't find $filename in \@INC";
+#     }
+#     if ($@) {
+#         $INC{$filename} = undef;
+#         die $@;
+#     }
+#     elsif (!$result) {
+#         delete $INC{$filename};
+#         die "$filename did not return true value";
+#     }
+#     else {
+#         return $result;
+#     }
+# }
+
 sub Egbk::require(;$) {
 
     local $_ = shift if @_;
-    return 1 if $INC{$_};
+
+    if (exists $INC{$_}) {
+        return 1 if $INC{$_};
+        croak "Compilation failed in require: $_";
+    }
 
     # jcode.pl
     # ftp://ftp.iij.ad.jp/pub/IIJ/dist/utashiro/perl/
@@ -5738,6 +4353,7 @@ ITER_REQUIRE:
             }
 
             if (Egbk::f($realfilename)) {
+                $INC{$_} = $realfilename;
 
                 my $script = '';
 
@@ -5762,7 +4378,7 @@ ITER_REQUIRE:
                     elsif (exists $ENV{'SJIS_NONBLOCK'}) {
                         eval q{
                             unless (flock($fh, LOCK_SH | LOCK_NB)) {
-                                carp "$__FILE__: Can't immediately read-lock the file: $realfilename.e";
+                                carp "Can't immediately read-lock the file: $realfilename.e";
                                 exit;
                             }
                         };
@@ -5805,7 +4421,7 @@ ITER_REQUIRE:
                         elsif (exists $ENV{'SJIS_NONBLOCK'}) {
                             eval q{
                                 unless (flock($fh, LOCK_EX | LOCK_NB)) {
-                                    carp "$__FILE__: Can't immediately write-lock the file: $realfilename.e";
+                                    carp "Can't immediately write-lock the file: $realfilename.e";
                                     exit;
                                 }
                             };
@@ -5813,8 +4429,8 @@ ITER_REQUIRE:
                         else {
                             eval q{ flock($fh, LOCK_EX) };
                         }
-                        truncate($fh, 0) or croak "$__FILE__: Can't truncate file: $realfilename.e";
-                        seek($fh, 0, 0)  or croak "$__FILE__: Can't seek file: $realfilename.e";
+                        truncate($fh, 0) or croak "Can't truncate file: $realfilename.e";
+                        seek($fh, 0, 0)  or croak "Can't seek file: $realfilename.e";
                         print {$fh} $script;
                         if ($^O eq 'MacOS') {
                             eval q{
@@ -5826,19 +4442,29 @@ ITER_REQUIRE:
                     }
                 }
 
-                no strict;
+                if (eval {CORE::require strict}) {
+                    strict::->unimport;
+                }
                 local $@;
-                $result = eval $script;
+                $result = scalar eval $script;
 
                 last ITER_REQUIRE;
             }
         }
         croak "Can't find $_ in \@INC";
     }
-    croak $@ if $@;
-    croak "$_ did not return true value" unless $result;
-    $INC{$_} = $realfilename;
-    return $result;
+
+    if ($@) {
+        $INC{$_} = undef;
+        croak $@;
+    }
+    elsif (not $result) {
+        delete $INC{$_};
+        croak "$_ did not return true value";
+    }
+    else {
+        return $result;
+    }
 }
 
 #
@@ -6113,6 +4739,8 @@ Egbk - Run-time routines for GBK.pm
     Egbk::uc_;
     Egbk::ucfirst(...);
     Egbk::ucfirst_;
+    Egbk::fc(...);
+    Egbk::fc_;
     Egbk::ignorecase(...);
     Egbk::capture(...);
     Egbk::chr(...);
@@ -6185,31 +4813,150 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   @split = Egbk::split();
   @split = Egbk::split;
 
-  Scans a GBK $string for delimiters that match pattern and splits the GBK
-  $string into a list of substrings, returning the resulting list value in list
-  context, or the count of substrings in scalar context. The delimiters are
-  determined by repeated pattern matching, using the regular expression given in
-  pattern, so the delimiters may be of any size and need not be the same GBK
-  $string on every match. If the pattern doesn't match at all, Egbk::split returns
-  the original GBK $string as a single substring. If it matches once, you get
-  two substrings, and so on.
-  If $limit is specified and is not negative, the function splits into no more than
-  that many fields. If $limit is negative, it is treated as if an arbitrarily large
-  $limit has been specified. If $limit is omitted, trailing null fields are stripped
-  from the result (which potential users of pop would do well to remember).
-  If GBK $string is omitted, the function splits the $_ GBK string.
-  If $patten is also omitted, the function splits on whitespace, /\s+/, after
+  This function scans a string given by $string for separators, and splits the
+  string into a list of substring, returning the resulting list value in list
+  context or the count of substring in scalar context. Scalar context also causes
+  split to write its result to @_, but this usage is deprecated. The separators
+  are determined by repeated pattern matching, using the regular expression given
+  in /pattern/, so the separators may be of any size and need not be the same
+  string on every match. (The separators are not ordinarily returned; exceptions
+  are discussed later in this section.) If the /pattern/ doesn't match the string
+  at all, Egbk::split returns the original string as a single substring, If it
+  matches once, you get two substrings, and so on. You may supply regular
+  expression modifiers to the /pattern/, like /pattern/i, /pattern/x, etc. The
+  //m modifier is assumed when you split on the pattern /^/.
+
+  If $limit is specified and positive, the function splits into no more than that
+  many fields (though it may split into fewer if it runs out of separators). If
+  $limit is negative, it is treated as if an arbitrarily large $limit has been
+  specified If $limit is omitted or zero, trailing null fields are stripped from
+  the result (which potential users of pop would do wel to remember). If $string
+  is omitted, the function splits the $_ string. If /pattern/ is also omitted or
+  is the literal space, " ", the function split on whitespace, /\s+/, after
   skipping any leading whitespace.
-  If the pattern contains parentheses, then the substring matched by each pair of
-  parentheses is included in the resulting list, interspersed with the fields that
-  are ordinarily returned.
-  Unlike Perl4, you cannot force the split into @_ by using ?? as the pattern
-  delimiters, it only returns the list value.
+
+  A /pattern/ of /^/ is secretly treated if it it were /^/m, since it isn't much
+  use otherwise.
+
+  String of any length can be split:
+
+  @chars  = Egbk::split(//,  $word);
+  @fields = Egbk::split(/:/, $line);
+  @words  = Egbk::split(" ", $paragraph);
+  @lines  = Egbk::split(/^/, $buffer);
+
+  A pattern capable of matching either the null string or something longer than
+  the null string (for instance, a pattern consisting of any single character
+  modified by a * or ?) will split the value of $string into separate characters
+  wherever it matches the null string between characters; nonnull matches will
+  skip over the matched separator characters in the usual fashion. (In other words,
+  a pattern won't match in one spot more than once, even if it matched with a zero
+  width.) For example:
+
+  print join(":" => Egbk::split(/ */, "hi there"));
+
+  produces the output "h:i:t:h:e:r:e". The space disappers because it matches
+  as part of the separator. As a trivial case, the null pattern // simply splits
+  into separate characters, and spaces do not disappear. (For normal pattern
+  matches, a // pattern would repeat the last successfully matched pattern, but
+  Egbk::split's pattern is exempt from that wrinkle.)
+
+  The $limit parameter splits only part of a string:
+
+  my ($login, $passwd, $remainder) = Egbk::split(/:/, $_, 3);
+
+  We encourage you to split to lists of names like this to make your code
+  self-documenting. (For purposes of error checking, note that $remainder would
+  be undefined if there were fewer than three fields.) When assigning to a list,
+  if $limit is omitted, Perl supplies a $limit one larger than the number of
+  variables in the list, to avoid unneccessary work. For the split above, $limit
+  would have been 4 by default, and $remainder would have received only the third
+  field, not all the rest of the fields. In time-critical applications, it behooves
+  you not to split into more fields than you really need. (The trouble with
+  powerful languages it that they let you be powerfully stupid at times.)
+
+  We said earlier that the separators are not returned, but if the /pattern/
+  contains parentheses, then the substring matched by each pair of parentheses is
+  included in the resulting list, interspersed with the fields that are ordinarily
+  returned. Here's a simple example:
+
+  Egbk::split(/([-,])/, "1-10,20");
+
+  which produces the list value:
+
+  (1, "-", 10, ",", 20)
+
+  With more parentheses, a field is returned for each pair, even if some pairs
+  don't match, in which case undefined values are returned in those positions. So
+  if you say:
+
+  Egbk::split(/(-)|(,)/, "1-10,20");
+
+  you get the value:
+
+  (1, "-", undef, 10, undef, ",", 20)
+
+  The /pattern/ argument may be replaced with an expression to specify patterns
+  that vary at runtime. As with ordinary patterns, to do run-time compilation only
+  once, use /$variable/o.
+
+  As a special case, if the expression is a single space (" "), the function
+  splits on whitespace just as Egbk::split with no arguments does. Thus,
+  Egbk::split(" ") can be used to emulate awk's default behavior. In contrast,
+  Egbk::split(/ /) will give you as many null initial fields as there are
+  leading spaces. (Other than this special case, if you supply a string instead
+  of a regular expression, it'll be interpreted as a regular expression anyway.)
+  You can use this property to remove leading and trailing whitespace from a
+  string and to collapse intervaning stretches of whitespace into a single
+  space:
+
+  $string = join(" ", Egbk::split(" ", $string));
+
+  The following example splits an RFC822 message header into a hash containing
+  $head{'Date'}, $head{'Subject'}, and so on. It uses the trick of assigning a
+  list of pairs to a hash, because separators altinate with separated fields, It
+  users parentheses to return part of each separator as part of the returned list
+  value. Since the split pattern is guaranteed to return things in pairs by virtue
+  of containing one set of parentheses, the hash assignment is guaranteed to
+  receive a list consisting of key/value pairs, where each key is the name of a
+  header field. (Unfortunately, this technique loses information for multiple lines
+  with the same key field, such as Received-By lines. Ah well)
+
+  $header =~ s/\n\s+/ /g; # Merge continuation lines.
+  %head = ("FRONTSTUFF", Egbk::split(/^(\S*?):\s*/m, $header));
+
+  The following example processes the entries in a Unix passwd(5) file. You could
+  leave out the chomp, in which case $shell would have a newline on the end of it.
+
+  open(PASSWD, "/etc/passwd");
+  while (<PASSWD>) {
+      chomp; # remove trailing newline.
+      ($login, $passwd, $uid, $gid, $gcos, $home, $shell) =
+          Egbk::split(/:/);
+      ...
+  }
+
+  Here's how process each word of each line of each file of input to create a
+  word-frequency hash.
+
+  while (<>) {
+      for my $word (Egbk::split()) {
+          $count{$word}++;
+      }
+  }
+
+  The inverse of Egbk::split is join, except that join can only join with the
+  same separator between all fields. To break apart a string with fixed-position
+  fields, use unpack.
 
 =item Transliteration
 
   $tr = Egbk::tr($variable,$bind_operator,$searchlist,$replacementlist,$modifier);
   $tr = Egbk::tr($variable,$bind_operator,$searchlist,$replacementlist);
+
+  This is the transliteration (sometimes erroneously called translation) operator,
+  which is like the y/// operator in the Unix sed program, only better, in
+  everybody's humble opinion.
 
   This function scans a GBK string character by character and replaces all
   occurrences of the characters found in $searchlist with the corresponding character
@@ -6217,13 +4964,18 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   If no GBK string is specified via =~ operator, the $_ variable is translated.
   $modifier are:
 
-  ------------------------------------------------------
+  ---------------------------------------------------------------------------
   Modifier   Meaning
-  ------------------------------------------------------
-  c          Complement $searchlist
-  d          Delete found but unreplaced characters
-  s          Squash duplicate replaced characters
-  ------------------------------------------------------
+  ---------------------------------------------------------------------------
+  c          Complement $searchlist.
+  d          Delete found but unreplaced characters.
+  s          Squash duplicate replaced characters.
+  r          Return transliteration and leave the original string untouched.
+  ---------------------------------------------------------------------------
+
+  To use with a read-only value without raising an exception, use the /r modifier.
+
+  print Egbk::tr('bookkeeper','=~','boep','peob','r'); # prints 'peekkoobor'
 
 =item Chop string
 
@@ -6231,66 +4983,197 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   $chop = Egbk::chop();
   $chop = Egbk::chop;
 
-  Chops off the last character of a GBK string contained in the variable (or
-  GBK strings in each element of a @list) and returns the character chopped.
-  The Egbk::chop operator is used primarily to remove the newline from the end of
-  an input record but is more efficient than s/\n$//. If no argument is given, the
-  function chops the $_ variable.
+  This fubction chops off the last character of a string variable and returns the
+  character chopped. The Egbk::chop function is used primary to remove the newline
+  from the end of an input recoed, and it is more efficient than using a
+  substitution. If that's all you're doing, then it would be safer to use chomp,
+  since Egbk::chop always shortens the string no matter what's there, and chomp
+  is more selective. If no argument is given, the function chops the $_ variable.
+
+  You cannot Egbk::chop a literal, only a variable. If you Egbk::chop a list of
+  variables, each string in the list is chopped:
+
+  @lines = `cat myfile`;
+  Egbk::chop(@lines);
+
+  You can Egbk::chop anything that is an lvalue, including an assignment:
+
+  Egbk::chop($cwd = `pwd`);
+  Egbk::chop($answer = <STDIN>);
+
+  This is different from:
+
+  $answer = Egbk::chop($tmp = <STDIN>); # WRONG
+
+  which puts a newline into $answer because Egbk::chop returns the character
+  chopped, not the remaining string (which is in $tmp). One way to get the result
+  intended here is with substr:
+
+  $answer = substr <STDIN>, 0, -1;
+
+  But this is more commonly written as:
+
+  Egbk::chop($answer = <STDIN>);
+
+  In the most general case, Egbk::chop can be expressed using substr:
+
+  $last_code = Egbk::chop($var);
+  $last_code = substr($var, -1, 1, ""); # same thing
+
+  Once you understand this equivalence, you can use it to do bigger chops. To
+  Egbk::chop more than one character, use substr as an lvalue, assigning a null
+  string. The following removes the last five characters of $caravan:
+
+  substr($caravan, -5) = '';
+
+  The negative subscript causes substr to count from the end of the string instead
+  of the beginning. To save the removed characters, you could use the four-argument
+  form of substr, creating something of a quintuple Egbk::chop;
+
+  $tail = substr($caravan, -5, 5, '');
+
+  This is all dangerous business dealing with characters instead of graphemes. Perl
+  doesn't really have a grapheme mode, so you have to deal with them yourself.
 
 =item Index string
 
-  $pos = Egbk::index($string,$substr,$position);
-  $pos = Egbk::index($string,$substr);
+  $byte_pos = Egbk::index($string,$substr,$byte_offset);
+  $byte_pos = Egbk::index($string,$substr);
 
-  Returns the position of the first occurrence of $substr in GBK $string.
-  The start, if specified, specifies the $position to start looking in the GBK
-  $string. Positions are integer numbers based at 0. If the substring is not found,
-  the Egbk::index function returns -1.
+  This function searches for one string within another. It returns the byte position
+  of the first occurrence of $substring in $string. The $byte_offset, if specified,
+  says how many bytes from the start to skip before beginning to look. Positions are
+  based at 0. If the substring is not found, the function returns one less than the
+  base, ordinarily -1. To work your way through a string, you might say:
+
+  $byte_pos = -1;
+  while (($byte_pos = Egbk::index($string, $lookfor, $byte_pos)) > -1) {
+      print "Found at $byte_pos\n";
+      $byte_pos++;
+  }
 
 =item Reverse index string
 
-  $pos = Egbk::rindex($string,$substr,$position);
-  $pos = Egbk::rindex($string,$substr);
+  $byte_pos = Egbk::rindex($string,$substr,$byte_offset);
+  $byte_pos = Egbk::rindex($string,$substr);
 
-  Works just like Egbk::index except that it returns the position of the last
-  occurence of $substr in GBK $string (a reverse index). The function returns
-  -1 if not found. $position, if specified, is the rightmost position that may be
-  returned, i.e., how far in the GBK string the function can search.
+  This function works just like Egbk::index except that it returns the byte
+  position of the last occurrence of $substring in $string (a reverse Egbk::index).
+  The function returns -1 if $substring is not found. $byte_offset, if specified,
+  is the rightmost byte position that may be returned. To work your way through a
+  string backward, say:
+
+  $byte_pos = length($string);
+  while (($byte_pos = GBK::rindex($string, $lookfor, $byte_pos)) >= 0) {
+      print "Found at $byte_pos\n";
+      $byte_pos--;
+  }
 
 =item Lower case string
 
   $lc = Egbk::lc($string);
   $lc = Egbk::lc_;
 
-  Returns a lowercase version of GBK string (or $_, if omitted). This is the
-  internal function implementing the \L escape in double-quoted strings.
+  This function returns a lowercased version of GBK $string (or $_, if
+  $string is omitted). This is the internal function implementing the \L escape
+  in double-quoted strings.
+
+  You can use the Egbk::fc function for case-insensitive comparisons via GBK
+  software.
 
 =item Lower case first character of string
 
   $lcfirst = Egbk::lcfirst($string);
   $lcfirst = Egbk::lcfirst_;
 
-  Returns a version of GBK string (or $_, if omitted) with the first character
-  lowercased. This is the internal function implementing the \l escape in double-
-  quoted strings.
+  This function returns a version of GBK $string with the first character
+  lowercased (or $_, if $string is omitted). This is the internal function
+  implementing the \l escape in double-quoted strings.
 
 =item Upper case string
 
   $uc = Egbk::uc($string);
   $uc = Egbk::uc_;
 
-  Returns an uppercased version of GBK string (or $_, if string is omitted).
-  This is the internal function implementing the \U escape in double-quoted
-  strings.
+  This function returns an uppercased version of GBK $string (or $_, if
+  $string is omitted). This is the internal function implementing the \U escape
+  in interpolated strings. For titlecase, use Egbk::ucfirst instead.
+
+  You can use the Egbk::fc function for case-insensitive comparisons via GBK
+  software.
 
 =item Upper case first character of string
 
   $ucfirst = Egbk::ucfirst($string);
   $ucfirst = Egbk::ucfirst_;
 
-  Returns a version of GBK string (or $_, if omitted) with the first character
-  uppercased. This is the internal function implementing the \u escape in double-
-  quoted strings.
+  This function returns a version of GBK $string with the first character
+  titlecased and other characters left alone (or $_, if $string is omitted).
+  Titlecase is "Camel" for an initial capital that has (or expects to have)
+  lowercase characters following it, not uppercase ones. Exsamples are the first
+  letter of a sentence, of a person's name, of a newspaper headline, or of most
+  words in a title. Characters with no titlecase mapping return the uppercase
+  mapping instead. This is the internal function implementing the \u escape in
+  double-quoted strings.
+
+  To capitalize a string by mapping its first character to titlecase and the rest
+  to lowercase, use:
+
+  $titlecase = Egbk::ucfirst(substr($word,0,1)) . Egbk::lc(substr($word,1));
+
+  or
+
+  $string =~ s/(\w)(\w*)/\u$1\L$2/g;
+
+  Do not use:
+
+  $do_not_use = Egbk::ucfirst(Egbk::lc($word));
+
+  or "\u\L$word", because that can produce a different and incorrect answer with
+  certain characters. The titlecase of something that's been lowercased doesn't
+  always produce the same thing titlecasing the original produces.
+
+  Because titlecasing only makes sense at the start of a string that's followed
+  by lowercase characters, we can't think of any reason you might want to titlecase
+  every character in a string.
+
+  See also P.287 A Case of Mistaken Identity
+  in Chapter 6: Unicode
+  of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
+
+=item Fold case string
+
+  P.860 fc
+  in Chapter 27: Functions
+  of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
+
+  $fc = Egbk::fc($string);
+  $fc = Egbk::fc_;
+
+  New to GBK software, this function returns the full Unicode-like casefold of
+  GBK $string (or $_, if omitted). This is the internal function implementing
+  the \F escape in double-quoted strings.
+
+  Just as title-case is based on uppercase but different, foldcase is based on
+  lowercase but different. In ASCII there is a one-to-one mapping between only
+  two cases, but in other encoding there is a one-to-many mapping and between three
+  cases. Because that's too many combinations to check manually each time, a fourth
+  casemap called foldcase was invented as a common intermediary for the other three.
+  It is not a case itself, but it is a casemap.
+
+  To compare whether two strings are the same without regard to case, do this:
+
+  Egbk::fc($a) eq Egbk::fc($b)
+
+  The reliable way to compare string case-insensitively was with the /i pattern
+  modifier, because GBK software has always used casefolding semantics for
+  case-insensitive pattern matches. Knowing this, you can emulate equality
+  comparisons like this:
+
+  sub fc_eq ($$) {
+      my($a,$b) = @_;
+      return $a =~ /\A\Q$b\E\z/i;
+  }
 
 =item Make ignore case string
 
@@ -6309,50 +5192,46 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   $chr = Egbk::chr($code);
   $chr = Egbk::chr_;
 
-  This function returns the character represented by that $code in the character
-  set. For example, Egbk::chr(65) is "A" in either ASCII or GBK, not Unicode,
-  and Egbk::chr(0x82a0) is a GBK HIRAGANA LETTER A. For the reverse of
-  Egbk::chr, use GBK::ord.
+  This function returns a programmer-visible character, character represented by
+  that $code in the character set. For example, Egbk::chr(65) is "A" in either
+  ASCII or GBK, not Unicode. For the reverse of Egbk::chr, use GBK::ord.
 
-=item File test operator -X
+=item File test function Egbk::X
 
-  A file test operator is an unary operator that tests a pathname or a filehandle.
-  If $string is omitted, it uses $_ by function Egbk::r_.
-  The following functions function when the pathname ends with chr(0x5C) on MSWin32.
+  The following all functions function when the pathname ends with chr(0x5C) on
+  MSWin32.
 
-  $test = Egbk::r $string;
-  $test = Egbk::r_;
-
-  Returns 1 when true case or '' when false case.
-  Returns undef unless successful.
+  A file test function is a unary function that takes one argument, either a
+  filename or a filehandle, and tests the associated file to see whether something
+  is true about it. If the argument is omitted, it tests $_. Unless otherwise
+  documented, it returns 1 for true and "" for false, or the undefined value if
+  the file doesn't exist or is otherwise inaccessible. Currently implemented file
+  test functions are listed in:
 
   ------------------------------------------------------------------------------
   Function and Prototype     Meaning
   ------------------------------------------------------------------------------
-  Egbk::r(*), Egbk::r_()   File is readable by effective uid/gid
-  Egbk::w(*), Egbk::w_()   File is writable by effective uid/gid
-  Egbk::x(*), Egbk::x_()   File is executable by effective uid/gid
-  Egbk::o(*), Egbk::o_()   File is owned by effective uid
-  Egbk::R(*), Egbk::R_()   File is readable by real uid/gid
-  Egbk::W(*), Egbk::W_()   File is writable by real uid/gid
-  Egbk::X(*), Egbk::X_()   File is executable by real uid/gid
-  Egbk::O(*), Egbk::O_()   File is owned by real uid
-  Egbk::e(*), Egbk::e_()   File exists
-  Egbk::z(*), Egbk::z_()   File has zero size
-  Egbk::f(*), Egbk::f_()   File is a plain file
-  Egbk::d(*), Egbk::d_()   File is a directory
-  Egbk::l(*), Egbk::l_()   File is a symbolic link
-  Egbk::p(*), Egbk::p_()   File is a named pipe (FIFO)
-  Egbk::S(*), Egbk::S_()   File is a socket
-  Egbk::b(*), Egbk::b_()   File is a block special file
-  Egbk::c(*), Egbk::c_()   File is a character special file
-  Egbk::u(*), Egbk::u_()   File has setuid bit set
-  Egbk::g(*), Egbk::g_()   File has setgid bit set
-  Egbk::k(*), Egbk::k_()   File has sticky bit set
+  Egbk::r(*), Egbk::r_()   File is readable by effective uid/gid.
+  Egbk::w(*), Egbk::w_()   File is writable by effective uid/gid.
+  Egbk::x(*), Egbk::x_()   File is executable by effective uid/gid.
+  Egbk::o(*), Egbk::o_()   File is owned by effective uid.
+  Egbk::R(*), Egbk::R_()   File is readable by real uid/gid.
+  Egbk::W(*), Egbk::W_()   File is writable by real uid/gid.
+  Egbk::X(*), Egbk::X_()   File is executable by real uid/gid.
+  Egbk::O(*), Egbk::O_()   File is owned by real uid.
+  Egbk::e(*), Egbk::e_()   File exists.
+  Egbk::z(*), Egbk::z_()   File has zero size.
+  Egbk::f(*), Egbk::f_()   File is a plain file.
+  Egbk::d(*), Egbk::d_()   File is a directory.
+  Egbk::l(*), Egbk::l_()   File is a symbolic link.
+  Egbk::p(*), Egbk::p_()   File is a named pipe (FIFO).
+  Egbk::S(*), Egbk::S_()   File is a socket.
+  Egbk::b(*), Egbk::b_()   File is a block special file.
+  Egbk::c(*), Egbk::c_()   File is a character special file.
+  Egbk::u(*), Egbk::u_()   File has setuid bit set.
+  Egbk::g(*), Egbk::g_()   File has setgid bit set.
+  Egbk::k(*), Egbk::k_()   File has sticky bit set.
   ------------------------------------------------------------------------------
-
-  Returns 1 when true case or '' when false case.
-  Returns undef unless successful.
 
   The Egbk::T, Egbk::T_, Egbk::B and Egbk::B_ work as follows. The first block
   or so of the file is examined for strange chatracters such as
@@ -6363,28 +5242,47 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   used on a filehandle, the current input (standard I/O or "stdio") buffer is
   examined rather than the first block of the file. Both Egbk::T and Egbk::B
   return 1 as true on an empty file, or on a file at EOF (end-of-file) when testing
-  a filehandle. Both Egbk::T and Egbk::B deosn't work when given the special
-  filehandle consisting of a solitary underline.
+  a filehandle. Both Egbk::T and Egbk::B doesn't work when given the special
+  filehandle consisting of a solitary underline. Because Egbk::T has to read to
+  do the test, you don't want to use Egbk::T on special files that might hang or
+  give you other kinds or grief. So on most occasions you'll want to test with a
+  Egbk::f first, as in:
+
+  next unless Egbk::f($file) && Egbk::T($file);
 
   ------------------------------------------------------------------------------
   Function and Prototype     Meaning
   ------------------------------------------------------------------------------
-  Egbk::T(*), Egbk::T_()   File is a text file
-  Egbk::B(*), Egbk::B_()   File is a binary file (opposite of -T)
+  Egbk::T(*), Egbk::T_()   File is a text file.
+  Egbk::B(*), Egbk::B_()   File is a binary file (opposite of -T).
   ------------------------------------------------------------------------------
 
-  Returns useful value if successful, or undef unless successful.
+  File ages for Egbk::M, Egbk::M_, Egbk::A, Egbk::A_, Egbk::C, and Egbk::C_
+  are returned in days (including fractional days) since the script started running.
+  This start time is stored in the special variable $^T ($BASETIME). Thus, if the
+  file changed after the script, you would get a negative time. Note that most time
+  values (86,399 out of 86,400, on average) are fractional, so testing for equality
+  with an integer without using the int function is usually futile. Examples:
 
-  $value = Egbk::s $string;
-  $value = Egbk::s_;
+  next unless Egbk::M($file) > 0.5;     # files are older than 12 hours
+  &newfile if Egbk::M($file) < 0;       # file is newer than process
+  &mailwarning if int(Egbk::A_) == 90;  # file ($_) was accessed 90 days ago today
 
   ------------------------------------------------------------------------------
   Function and Prototype     Meaning
   ------------------------------------------------------------------------------
-  Egbk::s(*), Egbk::s_()   File has nonzero size (returns size in bytes)
-  Egbk::M(*), Egbk::M_()   Age of file (at startup) in days since modification
-  Egbk::A(*), Egbk::A_()   Age of file (at startup) in days since last access
-  Egbk::C(*), Egbk::C_()   Age of file (at startup) in days since inode change
+  Egbk::M(*), Egbk::M_()   Age of file (at startup) in days since modification.
+  Egbk::A(*), Egbk::A_()   Age of file (at startup) in days since last access.
+  Egbk::C(*), Egbk::C_()   Age of file (at startup) in days since inode change.
+  ------------------------------------------------------------------------------
+
+  The Egbk::s, and Egbk::s_ returns file size in bytes if succesful, or undef
+  unless successful.
+
+  ------------------------------------------------------------------------------
+  Function and Prototype     Meaning
+  ------------------------------------------------------------------------------
+  Egbk::s(*), Egbk::s_()   File has nonzero size (returns size in bytes).
   ------------------------------------------------------------------------------
 
 =item Filename expansion (globbing)
@@ -6392,23 +5290,46 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   @glob = Egbk::glob($string);
   @glob = Egbk::glob_;
 
-  Performs filename expansion (DOS-like globbing) on $string, returning the next
-  successive name on each call. If $string is omitted, $_ is globbed instead.
+  This function returns the value of $string with filename expansions the way a
+  shell would expand them, returning the next successive name on each call.
+  If $string is omitted, $_ is globbed instead. This is the internal function
+  implementing the <*> operator.
   This function function when the pathname ends with chr(0x5C) on MSWin32.
 
-  For example, C<<..\\l*b\\file/*glob.p?>> on MSWin32 or UNIX will work as
-  expected (in that it will find something like '..\lib\File/DosGlob.pm'
-  alright).
-  Note that all path components are
-  case-insensitive, and that backslashes and forward slashes are both accepted,
-  and preserved. You may have to double the backslashes if you are putting them in
-  literally, due to double-quotish parsing of the pattern by perl.
-  A tilde ("~") expands to the current user's home directory.
+  For economic reasons, the algorithm matches the command.com or cmd.exe's style
+  of expansion, not the UNIX-like shell's. An asterisk ("*") matches any sequence
+  of any character (including none). A question mark ("?") matches any one
+  character or none. A tilde ("~") expands to a home directory, as in "~/.*rc"
+  for all the current user's "rc" files, or "~jane/Mail/*" for all of Jane's mail
+  files.
 
-  Spaces in the argument delimit distinct patterns, so C<glob('*.exe *.dll')> globs
-  all filenames that end in C<.exe> or C<.dll>. If you want to put in literal spaces
-  in the glob pattern, you can escape them with either double quotes.
-  e.g. C<glob('c:/"Program Files"/*/*.dll')>.
+  For example, C<<..\\l*b\\file/*glob.p?>> on MSWin32 or UNIX will work as
+  expected (in that it will find something like '..\lib\File/DosGlob.pm' alright).
+
+  Note that all path components are case-insensitive, and that backslashes and
+  forward slashes are both accepted, and preserved. You may have to double the
+  backslashes if you are putting them in literally, due to double-quotish parsing
+  of the pattern by perl.
+
+  The Egbk::glob function grandfathers the use of whitespace to separate multiple
+  patterns such as <*.c *.h>. If you want to glob filenames that might contain
+  whitespace, you'll have to use extra quotes around the spacy filename to protect
+  it. For example, to glob filenames that have an "e" followed by a space followed
+  by an "f", use either of:
+
+  @spacies = <"*e f*">;
+  @spacies = Egbk::glob('"*e f*"');
+  @spacies = Egbk::glob(q("*e f*"));
+
+  If you had to get a variable through, you could do this:
+
+  @spacies = Egbk::glob("'*${var}e f*'");
+  @spacies = Egbk::glob(qq("*${var}e f*"));
+
+  Hint: Programmer Efficiency
+
+  "When I'm on Windows, I use split(/\n/,`dir /s /b *.* 2>NUL`) instead of glob('*.*')"
+  -- ina
 
 =item Statistics about link
 
@@ -6417,8 +5338,8 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
   Like Egbk::stat, returns information on file, except that if file is a symbolic
   link, Egbk::lstat returns information about the link; Egbk::stat returns
-  information about the file pointed to by the link. (If symbolic links are
-  unimplemented on your system, a normal Egbk::stat is done instead.) If file is
+  information about the file pointed to by the link. If symbolic links are
+  unimplemented on your system, a normal Egbk::stat is done instead. If file is
   omitted, returns information on file given in $_.
   This function function when the filename ends with chr(0x5C) on MSWin32.
 
@@ -6426,50 +5347,70 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
   $rc = Egbk::opendir(DIR,$dir);
 
-  Opens a directory for processing by readdir, telldir, seekdir, rewinddir and
-  closedir. The function returns true if successful.
+  This function opens a directory named $dir for processing by readdir, telldir,
+  seekdir, rewinddir, and closedir. The function returns true if successful.
+  Directory handles have their own namespace from filehandles.
   This function function when the directory name ends with chr(0x5C) on MSWin32.
 
 =item Statistics about file
 
-  @stat = Egbk::stat($file);
+  $stat = Egbk::stat(FILEHANDLE);
+  $stat = Egbk::stat(DIRHANDLE);
+  $stat = Egbk::stat($expr);
+  $stat = Egbk::stat_;
+  @stat = Egbk::stat(FILEHANDLE);
+  @stat = Egbk::stat(DIRHANDLE);
+  @stat = Egbk::stat($expr);
   @stat = Egbk::stat_;
 
-  Returns a 13-element list giving the statistics for a file, indicated by either
-  a filehandle or an expression that gives its name. It's typically used as
-  follows:
+  In scalar context, this function returns a Boolean value that indicates whether
+  the call succeeded. In list context, it returns a 13-element list giving the
+  statistics for a file, either the file opened via FILEHANDLE or DIRHANDLE, or
+  named by $expr. It's typically used as followes:
 
   ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
-      $atime,$mtime,$ctime,$blksize,$blocks) = Egbk::stat($file);
+      $atime,$mtime,$ctime,$blksize,$blocks) = Egbk::stat($expr);
 
-  Not all fields are supported on all filesystem types. Here are the meanings of
-  the fields:
+  Not all fields are supported on all filesystem types; unsupported fields return
+  0. Here are the meanings of the fields:
 
-  -----------------------------------------------------------------
-  Field     Meaning
-  -----------------------------------------------------------------
-  dev       Device number of filesystem
-  ino       Inode number
-  mode      File mode (type and permissions)
-  nlink     Nunmer of (hard) links to the file
-  uid       Numeric user ID of file's owner
-  gid       Numeric group ID of file's owner
-  rdev      The device identifier (special files only)
-  size      Total size of file, in bytes
-  atime     Last access time since the epoch
-  mtime     Last modification time since the epoch
-  ctime     Inode change time (not creation time!) since the epoch
-  blksize   Preferred blocksize for file system I/O
-  blocks    Actual number of blocks allocated
-  -----------------------------------------------------------------
+  -------------------------------------------------------------------------
+  Index  Field      Meaning
+  -------------------------------------------------------------------------
+    0    $dev       Device number of filesystem
+    1    $ino       Inode number
+    2    $mode      File mode (type and permissions)
+    3    $nlink     Nunmer of (hard) links to the file
+    4    $uid       Numeric user ID of file's owner
+    5    $gid       Numeric group ID of file's owner
+    6    $rdev      The device identifier (special files only)
+    7    $size      Total size of file, in bytes
+    8    $atime     Last access time since the epoch
+    9    $mtime     Last modification time since the epoch
+   10    $ctime     Inode change time (not creation time!) since the epoch
+   11    $blksize   Preferred blocksize for file system I/O
+   12    $blocks    Actual number of blocks allocated
+  -------------------------------------------------------------------------
 
-  $dev and $ino, token together, uniquely identify a file. The $blksize and
-  $blocks are likely defined only on BSD-derived filesystem. The $blocks field
-  (if defined) is reported in 512-byte blocks.
-  If stat is passed the special filehandle consisting of an underline, no
-  actual stat is done, but the current contents of the stat structure from the
-  last stat or stat-based file test (the -x operators) is returned.
-  If file is omitted, returns information on file given in $_.
+  $dev and $ino, token together, uniquely identify a file on the same system.
+  The $blksize and $blocks are likely defined only on BSD-derived filesystems.
+  The $blocks field (if defined) is reported in 512-byte blocks. The value of
+  $blocks * 512 can differ greatly from $size for files containing unallocated
+  blocks, or "hole", which aren't counted in $blocks.
+
+  If Egbk::stat is passed the special filehandle consisting of an underline, no
+  actual stat(2) is done, but the current contents of the stat structure from
+  the last Egbk::stat, Egbk::lstat, or Egbk::stat-based file test function
+  (such as Egbk::r, Egbk::w, and Egbk::x) are returned.
+
+  Because the mode contains both the file type and its permissions, you should
+  mask off the file type portion and printf or sprintf using a "%o" if you want
+  to see the real permissions:
+
+  $mode = (Egbk::stat($expr))[2];
+  printf "Permissions are %04o\n", $mode &07777;
+
+  If $expr is omitted, returns information on file given in $_.
   This function function when the filename ends with chr(0x5C) on MSWin32.
 
 =item Deletes a list of files.
@@ -6489,14 +5430,16 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   $chdir = Egbk::chdir($dirname);
   $chdir = Egbk::chdir;
 
-  Changes the working directory to $dirname, if possible. If $dirname is omitted,
-  it changes to the home directory. The function returns 1 upon success, 0
-  otherwise (and puts the error code into $!).
+  This function changes the current process's working directory to $dirname, if
+  possible. If $dirname is omitted, $ENV{'HOME'} is used if set, and $ENV{'LOGDIR'}
+  otherwise; these are usually the process's home directory. The function returns
+  true on success, false otherwise (and puts the error code into $!).
 
-  This function can't function when the $dirname ends with chr(0x5C) on perl5.006,
-  perl5.008, perl5.010, perl5.012, perl5.014 on MSWin32.
+  chdir("$prefix/lib") || die "Can't cd to $prefix/lib: $!";
 
-=item do file
+  This function has limitation on the MSWin32. See also BUGS AND LIMITATIONS.
+
+=item Do file
 
   $return = Egbk::do($file);
 
@@ -6546,29 +5489,27 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   Egbk::do to reload that file. This is more tidily accomplished with Egbk::do than
   with Egbk::require.
 
-=item require file
+=item Require file
 
   Egbk::require($file);
   Egbk::require();
 
-  This function asserts a dependency of some kind on its argument. If an argument is not
-  supplied, $_ is used.
+  This function asserts a dependency of some kind on its argument. If an argument is
+  not supplied, $_ is used.
 
-  If the argument is a string, Egbk::require loads and executes the Perl code found in
-  the separate file whose name is given by the string. This is similar to performing a
-  Egbk::do on a file, except that Egbk::require checks to see whether the library
-  file has been loaded already and raises an exception if any difficulties are
-  encountered. (It can thus be used to express file dependencies without worrying about
-  duplicate compilation.) Like its cousins Egbk::do and use, Egbk::require knows how
-  to search the include path stored in the @INC array and to update %INC upon success.
+  Egbk::require loads and executes the Perl code found in the separate file whose
+  name is given by the $file. This is similar to using a Egbk::do on a file, except
+  that Egbk::require checks to see whether the library file has been loaded already
+  and raises an exception if any difficulties are encountered. (It can thus be used
+  to express file dependencies without worrying about duplicate compilation.) Like
+  its cousins Egbk::do, Egbk::require knows how to search the include path stored
+  in the @INC array and to update %INC on success.
 
   The file must return true as the last value to indicate successful execution of any
-  initialization code, so it's customary to end such a file with 1; unless you're sure
+  initialization code, so it's customary to end such a file with 1 unless you're sure
   it'll return true otherwise.
 
-  See also do file.
-
-=item current position of the readdir
+=item Current position of the readdir
 
   $telldir = Egbk::telldir(DIRHANDLE);
 

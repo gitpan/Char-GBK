@@ -9,23 +9,21 @@ my $__FILE__ = __FILE__;
 
 # Test::Harness::runtests() and reset() make "Error: Runtime exception".
 #
-# t/303_m_once........Error: Runtime exception
+# t/303_m_once_reset........Error: Runtime exception
 # Error: Runtime exception
 # Can't spawn "cmd.exe": No such file or directory at Foo.pm line NNN.
-# Callback called exit at t/303_m_once.t line NNN.
-# BEGIN failed--compilation aborted at t/303_m_once.t line NNN.
+# Callback called exit at t/303_m_once_reset.t line NNN.
+# BEGIN failed--compilation aborted at t/303_m_once_reset.t line NNN.
 # dubious
 #         Test returned status 2 (wstat 512, 0x200)
 # DIED. FAILED tests 1-8
 #         Failed 8/8 tests, 0.00% okay
 
-if (($] =~ /^5\.005/) and ($^O =~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms)) {
-    unless ((-t STDIN) and (-t STDOUT)) {
-        for my $tno (1 .. 8) {
-            print qq{ok - $tno # SKIP $^X/$] $^O $__FILE__\n};
-        }
-        exit;
+if ($] =~ /^5\.005/) {
+    for my $tno (1 .. 8) {
+        print qq{ok - $tno # SKIP $^X/$] $^O $__FILE__\n};
     }
+    exit;
 }
 
 my @m_once = ();
