@@ -13,10 +13,10 @@ BEGIN {
     if ($^X =~ / jperl /oxmsi) {
         die __FILE__, ": needs perl(not jperl) 5.00503 or later. (\$^X==$^X)";
     }
-    if (ord('A') == 193) {
+    if (CORE::ord('A') == 193) {
         die __FILE__, ": is not US-ASCII script (may be EBCDIC or EBCDIK script).";
     }
-    if (ord('A') != 0x41) {
+    if (CORE::ord('A') != 0x41) {
         die __FILE__, ": is not US-ASCII script (must be US-ASCII script).";
     }
 }
@@ -27,7 +27,7 @@ BEGIN {
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.82 $ =~ /(\d+)/xmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.83 $ =~ /(\d+)/xmsg;
 
 BEGIN {
     my $PERL5LIB = __FILE__;
@@ -295,71 +295,72 @@ sub GBK::rindex($$;$);
 # Character class
 #
 BEGIN { eval q{ use vars qw(
-    @anchor
-    @dot
-    @dot_s
-    @eD
-    @eS
-    @eW
-    @eH
-    @eV
-    @eR
-    @eN
-    @not_alnum
-    @not_alpha
-    @not_ascii
-    @not_blank
-    @not_cntrl
-    @not_digit
-    @not_graph
-    @not_lower
-    @not_lower_i
-    @not_print
-    @not_punct
-    @not_space
-    @not_upper
-    @not_upper_i
-    @not_word
-    @not_xdigit
-    @eb
-    @eB
+    $anchor
+    $dot
+    $dot_s
+    $eD
+    $eS
+    $eW
+    $eH
+    $eV
+    $eR
+    $eN
+    $not_alnum
+    $not_alpha
+    $not_ascii
+    $not_blank
+    $not_cntrl
+    $not_digit
+    $not_graph
+    $not_lower
+    $not_lower_i
+    $not_print
+    $not_punct
+    $not_space
+    $not_upper
+    $not_upper_i
+    $not_word
+    $not_xdigit
+    $eb
+    $eB
+    $matched
 ) } }
-@{Egbk::anchor}      = qr{\G(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])*?};
-@{Egbk::dot}         = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x0A])};
-@{Egbk::dot_s}       = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])};
-@{Egbk::eD}          = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE0-9])};
+${Egbk::anchor}      = qr{\G(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])*?};
+${Egbk::dot}         = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x0A])};
+${Egbk::dot_s}       = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])};
+${Egbk::eD}          = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE0-9])};
 
-@{Egbk::eS}          = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x09\x0A\x0C\x0D\x20])};
+${Egbk::eS}          = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x09\x0A\x0C\x0D\x20])};
 
 # Incompatible Changes
 # \s in regular expressions now matches a Vertical Tab (experimental)
 # http://search.cpan.org/~zefram/perl-5.17.0/pod/perldelta.pod
 
-# @{Egbk::eS}        = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x09\x0A\x0B\x0C\x0D\x20])};
+# ${Egbk::eS}        = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x09\x0A\x0B\x0C\x0D\x20])};
 
-@{Egbk::eW}          = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE0-9A-Z_a-z])};
-@{Egbk::eH}          = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x09\x20])};
-@{Egbk::eV}          = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x0A\x0B\x0C\x0D])};
-@{Egbk::eR}          = qr{(?:\x0D\x0A|[\x0A\x0D])};
-@{Egbk::eN}          = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x0A])};
-@{Egbk::not_alnum}   = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x30-\x39\x41-\x5A\x61-\x7A])};
-@{Egbk::not_alpha}   = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x41-\x5A\x61-\x7A])};
-@{Egbk::not_ascii}   = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x00-\x7F])};
-@{Egbk::not_blank}   = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x09\x20])};
-@{Egbk::not_cntrl}   = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x00-\x1F\x7F])};
-@{Egbk::not_digit}   = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x30-\x39])};
-@{Egbk::not_graph}   = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x21-\x7F])};
-@{Egbk::not_lower}   = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x61-\x7A])};
-@{Egbk::not_lower_i} = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])};
-@{Egbk::not_print}   = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x20-\x7F])};
-@{Egbk::not_punct}   = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x21-\x2F\x3A-\x3F\x40\x5B-\x5F\x60\x7B-\x7E])};
-@{Egbk::not_space}   = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x09\x0A\x0B\x0C\x0D\x20])};
-@{Egbk::not_upper}   = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x41-\x5A])};
-@{Egbk::not_upper_i} = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])};
-@{Egbk::not_word}    = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x30-\x39\x41-\x5A\x5F\x61-\x7A])};
-@{Egbk::not_xdigit}  = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x30-\x39\x41-\x46\x61-\x66])};
-@{Egbk::eb}          = qr{(?:\A(?=[0-9A-Z_a-z])|(?<=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF])(?=[0-9A-Z_a-z])|(?<=[0-9A-Z_a-z])(?=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF]|\z))};
-@{Egbk::eB}          = qr{(?:(?<=[0-9A-Z_a-z])(?=[0-9A-Z_a-z])|(?<=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF])(?=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF]))};
+${Egbk::eW}          = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE0-9A-Z_a-z])};
+${Egbk::eH}          = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x09\x20])};
+${Egbk::eV}          = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x0A\x0B\x0C\x0D])};
+${Egbk::eR}          = qr{(?:\x0D\x0A|[\x0A\x0D])};
+${Egbk::eN}          = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x0A])};
+${Egbk::not_alnum}   = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x30-\x39\x41-\x5A\x61-\x7A])};
+${Egbk::not_alpha}   = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x41-\x5A\x61-\x7A])};
+${Egbk::not_ascii}   = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x00-\x7F])};
+${Egbk::not_blank}   = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x09\x20])};
+${Egbk::not_cntrl}   = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x00-\x1F\x7F])};
+${Egbk::not_digit}   = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x30-\x39])};
+${Egbk::not_graph}   = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x21-\x7F])};
+${Egbk::not_lower}   = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x61-\x7A])};
+${Egbk::not_lower_i} = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])};
+${Egbk::not_print}   = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x20-\x7F])};
+${Egbk::not_punct}   = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x21-\x2F\x3A-\x3F\x40\x5B-\x5F\x60\x7B-\x7E])};
+${Egbk::not_space}   = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x09\x0A\x0B\x0C\x0D\x20])};
+${Egbk::not_upper}   = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x41-\x5A])};
+${Egbk::not_upper_i} = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])};
+${Egbk::not_word}    = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x30-\x39\x41-\x5A\x5F\x61-\x7A])};
+${Egbk::not_xdigit}  = qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x30-\x39\x41-\x46\x61-\x66])};
+${Egbk::eb}          = qr{(?:\A(?=[0-9A-Z_a-z])|(?<=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF])(?=[0-9A-Z_a-z])|(?<=[0-9A-Z_a-z])(?=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF]|\z))};
+${Egbk::eB}          = qr{(?:(?<=[0-9A-Z_a-z])(?=[0-9A-Z_a-z])|(?<=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF])(?=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF]))};
 
 #
 # @ARGV wildcard globbing
@@ -863,7 +864,7 @@ sub Egbk::fc(@) {
 }
 
 #
-# GBK fold case lower case without parameter
+# GBK fold case without parameter
 #
 sub Egbk::fc_() {
     my $s = $_;
@@ -905,7 +906,7 @@ sub Egbk::fc_() {
     # in Chapter 29. Pragmatic Modules
     # of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
 
-    @Egbk::matched = (qr/(?{Egbk::matched})/);
+    $Egbk::matched = qr/(?{Egbk::matched})/;
 }
 
 #
@@ -949,9 +950,11 @@ sub Egbk::ignorecase(@) {
 
                         # escape character
                         for my $char (@charlist) {
+                            if (0) {
+                            }
 
                             # do not use quotemeta here
-                            if ($char =~ /\A ([\x80-\xFF].*) ($metachar) \z/oxms) {
+                            elsif ($char =~ /\A ([\x80-\xFF].*) ($metachar) \z/oxms) {
                                 $char = $1 . '\\' . $2;
                             }
                             elsif ($char =~ /\A [.|)] \z/oxms) {
@@ -988,9 +991,11 @@ sub Egbk::ignorecase(@) {
 
                         # escape character
                         for my $char (@charlist) {
+                            if (0) {
+                            }
 
                             # do not use quotemeta here
-                            if ($char =~ /\A ([\x80-\xFF].*) ($metachar) \z/oxms) {
+                            elsif ($char =~ /\A ([\x80-\xFF].*) ($metachar) \z/oxms) {
                                 $char = $1 . '\\' . $2;
                             }
                             elsif ($char =~ /\A [.|)] \z/oxms) {
@@ -1031,8 +1036,11 @@ sub Egbk::ignorecase(@) {
         for (my $i=0; $i <= $#char; $i++) {
             next if not defined $char[$i];
 
+            if (0) {
+            }
+
             # escape last octet of multiple-octet
-            if ($char[$i] =~ /\A ([\x80-\xFF].*) ($metachar) \z/oxms) {
+            elsif ($char[$i] =~ /\A ([\x80-\xFF].*) ($metachar) \z/oxms) {
                 $char[$i] = $1 . '\\' . $2;
             }
 
@@ -1058,9 +1066,9 @@ sub classic_character_class($) {
     my($char) = @_;
 
     return {
-        '\D' => '@{Egbk::eD}',
-        '\S' => '@{Egbk::eS}',
-        '\W' => '@{Egbk::eW}',
+        '\D' => '${Egbk::eD}',
+        '\S' => '${Egbk::eS}',
+        '\W' => '${Egbk::eW}',
         '\d' => '[0-9]',
                  # \t  \n  \f  \r space
         '\s' => '[\x09\x0A\x0C\x0D\x20]',
@@ -1098,11 +1106,11 @@ sub classic_character_class($) {
 
         # (and so on)
 
-        '\H' => '@{Egbk::eH}',
-        '\V' => '@{Egbk::eV}',
+        '\H' => '${Egbk::eH}',
+        '\V' => '${Egbk::eV}',
         '\h' => '[\x09\x20]',
         '\v' => '[\x0A\x0B\x0C\x0D]',
-        '\R' => '@{Egbk::eR}',
+        '\R' => '${Egbk::eR}',
 
         # \N
         #
@@ -1110,7 +1118,7 @@ sub classic_character_class($) {
         # Character Classes and other Special Escapes
         # Any character but \n (experimental). Not affected by /s modifier
 
-        '\N' => '@{Egbk::eN}',
+        '\N' => '${Egbk::eN}',
 
         # \b \B
 
@@ -1123,10 +1131,10 @@ sub classic_character_class($) {
         # of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
 
         # '\b' => '(?:(?<=\A|\W)(?=\w)|(?<=\w)(?=\W|\z))',
-        '\b' => '@{Egbk::eb}',
+        '\b' => '${Egbk::eb}',
 
         # '\B' => '(?:(?<=\w)(?=\w)|(?<=\W)(?=\W))',
-        '\B' => '@{Egbk::eB}',
+        '\B' => '${Egbk::eB}',
 
     }->{$char} || '';
 }
@@ -1694,19 +1702,19 @@ sub _charlist {
             $char[$i] = hexchr($1);
         }
 
-        # \N{CHARNAME} --> N{CHARNAME}
-        elsif ($char[$i] =~ /\A \\ ( N\{ ([^\x81-\xFE0-9\}][^\x81-\xFE\}]*) \} ) \z/oxms) {
-            $char[$i] = $1;
+        # \N{CHARNAME} --> N\{CHARNAME}
+        elsif ($char[$i] =~ /\A \\ (N) ( \{ ([^\x81-\xFE0-9\}][^\x81-\xFE\}]*) \} ) \z/oxms) {
+            $char[$i] = $1 . '\\' . $2;
         }
 
-        # \p{PROPERTY} --> p{PROPERTY}
-        elsif ($char[$i] =~ /\A \\ ( p\{ ([^\x81-\xFE0-9\}][^\x81-\xFE\}]*) \} ) \z/oxms) {
-            $char[$i] = $1;
+        # \p{PROPERTY} --> p\{PROPERTY}
+        elsif ($char[$i] =~ /\A \\ (p) ( \{ ([^\x81-\xFE0-9\}][^\x81-\xFE\}]*) \} ) \z/oxms) {
+            $char[$i] = $1 . '\\' . $2;
         }
 
-        # \P{PROPERTY} --> P{PROPERTY}
-        elsif ($char[$i] =~ /\A \\ ( P\{ ([^\x81-\xFE0-9\}][^\x81-\xFE\}]*) \} ) \z/oxms) {
-            $char[$i] = $1;
+        # \P{PROPERTY} --> P\{PROPERTY}
+        elsif ($char[$i] =~ /\A \\ (P) ( \{ ([^\x81-\xFE0-9\}][^\x81-\xFE\}]*) \} ) \z/oxms) {
+            $char[$i] = $1 . '\\' . $2;
         }
 
         # \p, \P, \X --> p, P, X
@@ -1745,15 +1753,15 @@ sub _charlist {
                 # '\s' => '[\x09\x0A\x0B\x0C\x0D\x20]',
 
                 '\w' => '[0-9A-Z_a-z]',
-                '\D' => '@{Egbk::eD}',
-                '\S' => '@{Egbk::eS}',
-                '\W' => '@{Egbk::eW}',
+                '\D' => '${Egbk::eD}',
+                '\S' => '${Egbk::eS}',
+                '\W' => '${Egbk::eW}',
 
-                '\H' => '@{Egbk::eH}',
-                '\V' => '@{Egbk::eV}',
+                '\H' => '${Egbk::eH}',
+                '\V' => '${Egbk::eV}',
                 '\h' => '[\x09\x20]',
                 '\v' => '[\x0A\x0B\x0C\x0D]',
-                '\R' => '@{Egbk::eR}',
+                '\R' => '${Egbk::eR}',
 
             }->{$1};
         }
@@ -1764,8 +1772,8 @@ sub _charlist {
 
                 '[:lower:]'   => '[\x41-\x5A\x61-\x7A]',
                 '[:upper:]'   => '[\x41-\x5A\x61-\x7A]',
-                '[:^lower:]'  => '@{Egbk::not_lower_i}',
-                '[:^upper:]'  => '@{Egbk::not_upper_i}',
+                '[:^lower:]'  => '${Egbk::not_lower_i}',
+                '[:^upper:]'  => '${Egbk::not_upper_i}',
 
             }->{$1};
         }
@@ -1786,20 +1794,20 @@ sub _charlist {
                 '[:upper:]'   => '[\x41-\x5A]',
                 '[:word:]'    => '[\x30-\x39\x41-\x5A\x5F\x61-\x7A]',
                 '[:xdigit:]'  => '[\x30-\x39\x41-\x46\x61-\x66]',
-                '[:^alnum:]'  => '@{Egbk::not_alnum}',
-                '[:^alpha:]'  => '@{Egbk::not_alpha}',
-                '[:^ascii:]'  => '@{Egbk::not_ascii}',
-                '[:^blank:]'  => '@{Egbk::not_blank}',
-                '[:^cntrl:]'  => '@{Egbk::not_cntrl}',
-                '[:^digit:]'  => '@{Egbk::not_digit}',
-                '[:^graph:]'  => '@{Egbk::not_graph}',
-                '[:^lower:]'  => '@{Egbk::not_lower}',
-                '[:^print:]'  => '@{Egbk::not_print}',
-                '[:^punct:]'  => '@{Egbk::not_punct}',
-                '[:^space:]'  => '@{Egbk::not_space}',
-                '[:^upper:]'  => '@{Egbk::not_upper}',
-                '[:^word:]'   => '@{Egbk::not_word}',
-                '[:^xdigit:]' => '@{Egbk::not_xdigit}',
+                '[:^alnum:]'  => '${Egbk::not_alnum}',
+                '[:^alpha:]'  => '${Egbk::not_alpha}',
+                '[:^ascii:]'  => '${Egbk::not_ascii}',
+                '[:^blank:]'  => '${Egbk::not_blank}',
+                '[:^cntrl:]'  => '${Egbk::not_cntrl}',
+                '[:^digit:]'  => '${Egbk::not_digit}',
+                '[:^graph:]'  => '${Egbk::not_graph}',
+                '[:^lower:]'  => '${Egbk::not_lower}',
+                '[:^print:]'  => '${Egbk::not_print}',
+                '[:^punct:]'  => '${Egbk::not_punct}',
+                '[:^space:]'  => '${Egbk::not_space}',
+                '[:^upper:]'  => '${Egbk::not_upper}',
+                '[:^word:]'   => '${Egbk::not_word}',
+                '[:^xdigit:]' => '${Egbk::not_xdigit}',
 
             }->{$1};
         }
@@ -4838,6 +4846,12 @@ sub GBK::reverse(@) {
         return CORE::reverse @_;
     }
     else {
+
+        # One of us once cornered Larry in an elevator and asked him what
+        # problem he was solving with this, but he looked as far off into
+        # the distance as he could in an elevator and said, "It seemed like
+        # a good idea at the time."
+
         return join '', CORE::reverse(join('',@_) =~ /\G ($q_char) /oxmsg);
     }
 }
