@@ -27,9 +27,9 @@ BEGIN {
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.83 $ =~ /(\d+)/oxmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.84 $ =~ /(\d+)/oxmsg;
 
-use Egbk;
+BEGIN { require Egbk; }
 
 # poor Symbol.pm - substitute of real Symbol.pm
 BEGIN {
@@ -65,16 +65,6 @@ sub LOCK_SH() {1}
 sub LOCK_EX() {2}
 sub LOCK_UN() {8}
 sub LOCK_NB() {4}
-
-# P.707 29.2.33. exec
-# in Chapter 29: Functions
-# of ISBN 0-596-00027-8 Programming Perl Third Edition.
-
-# P.855 exec
-# in Chapter 27: Functions
-# of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
-
-$| = 1;
 
 sub import() {}
 sub unimport() {}
@@ -266,7 +256,7 @@ if (not Egbk::e("$filename.e")) {
     if (eval q{ use Fcntl qw(O_WRONLY O_APPEND O_CREAT); 1 } and CORE::sysopen($fh,"$filename.e",&O_WRONLY|&O_APPEND|&O_CREAT)) {
     }
     else {
-        open($fh, ">>$filename.e") or die __FILE__, ": Can't write open file: $filename.e";
+        Egbk::_open_a($fh, "$filename.e") or die __FILE__, ": Can't write open file: $filename.e";
     }
 
     if (0) {
@@ -314,19 +304,8 @@ if (not Egbk::e("$filename.e")) {
     close($fh) or die __FILE__, ": Can't close file: $filename.e";
 }
 
-# P.565 23.1.2. Cleaning Up Your Environment
-# in Chapter 23: Security
-# of ISBN 0-596-00027-8 Programming Perl Third Edition.
-
-# P.656 Cleaning Up Your Environment
-# in Chapter 20: Security
-# of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
-
-# local $ENV{'PATH'} = '.';
-local @ENV{qw(IFS CDPATH ENV BASH_ENV)}; # Make %ENV safer
-
 my $fh = gensym();
-open($fh, "$filename.e") or die __FILE__, ": Can't read open file: $filename.e";
+Egbk::_open_r($fh, "$filename.e") or die __FILE__, ": Can't read open file: $filename.e";
 
 if (0) {
 }
@@ -347,6 +326,30 @@ if ($^W) {
     push @switch, '-w';
 }
 
+# P.707 29.2.33. exec
+# in Chapter 29: Functions
+# of ISBN 0-596-00027-8 Programming Perl Third Edition.
+#
+# If there is more than one argument in LIST, or if LIST is an array with more
+# than one value, the system shell will never be used. This also bypasses any
+# shell processing of the command. The presence or absence of metacharacters in
+# the arguments doesn't affect this list-triggered behavior, which makes it the
+# preferred from in security-conscious programs that do not with to expose
+# themselves to potential shell escapes.
+# Environment variable PERL5SHELL(Microsoft ports only) will never be used, too.
+
+# P.855 exec
+# in Chapter 27: Functions
+# of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
+#
+# If there is more than one argument in LIST, or if LIST is an array with more
+# than one value, the system shell will never be used. This also bypasses any
+# shell processing of the command. The presence or absence of metacharacters in
+# the arguments doesn't affect this list-triggered behavior, which makes it the
+# preferred from in security-conscious programs that do not wish to expose
+# themselves to injection attacks via shell escapes.
+# Environment variable PERL5SHELL(Microsoft ports only) will never be used, too.
+
 # P.489 #! and Quoting on Non-Unix Systems
 # in Chapter 19: The Command-Line Interface
 # of ISBN 0-596-00027-8 Programming Perl Third Edition.
@@ -357,11 +360,11 @@ if ($^W) {
 
 # DOS-like system
 if ($^O =~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
-    exit system
+    exit Egbk::_systemx
         _escapeshellcmd_MSWin32($^X),
 
-# -I switch can not treat space included path
-#       (map { '-I' . _escapeshellcmd_MSWin32($_) } @INC),
+    # -I switch can not treat space included path
+    #   (map { '-I' . _escapeshellcmd_MSWin32($_) } @INC),
         (map { '-I' .                         $_  } @INC),
 
         @switch,
@@ -371,7 +374,7 @@ if ($^O =~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
 
 # UNIX-like system
 else {
-    exit system
+    exit Egbk::_systemx
         _escapeshellcmd($^X),
         (map { '-I' . _escapeshellcmd($_) } @INC),
         @switch,
@@ -382,7 +385,9 @@ else {
 # escape shell command line on DOS-like system
 sub _escapeshellcmd_MSWin32 {
     my($word) = @_;
-    if ($word =~ / $anchor [ ] /oxms) {
+    if ($word =~ / [ ] /oxms) {
+
+        # both DOS-like and UNIX-like shell quote
         return qq{"$word"};
     }
     else {
@@ -393,7 +398,6 @@ sub _escapeshellcmd_MSWin32 {
 # escape shell command line on UNIX-like system
 sub _escapeshellcmd {
     my($word) = @_;
-    $word =~ s/([\t\n\r\x20!"#\$%&'()*+;<=>?\[\\\]^`{|}~\x7F\xFF])/\\$1/g;
     return $word;
 }
 
@@ -412,7 +416,7 @@ sub GBK::escape_script {
 
     # read GBK script
     my $fh = gensym();
-    open($fh, $script) or die __FILE__, ": Can't open file: $script";
+    Egbk::_open_r($fh, $script) or die __FILE__, ": Can't open file: $script";
     local $/ = undef; # slurp mode
     $_ = <$fh>;
     close($fh) or die __FILE__, ": Can't close file: $script";
@@ -4847,6 +4851,11 @@ sub e_sub {
                 $variable,                                                                    # 19
                 $variable,                                                                    # 20
                     $variable_basename,                                                       # 21
+
+# Binary "!~" is just like "=~" except the return value is negated in the logical sense.
+# It returns false if the match succeeds, and true if it fails.
+# (and so on)
+
                 ($bind_operator =~ / !~ /oxms) ? '!' : '',                                    # 22
                     $variable_basename,                                                       # 23
             );
@@ -5486,7 +5495,7 @@ sub e_use_noimport {
     my $fh = gensym();
     for my $realfilename (_realfilename($expr)) {
 
-        if (open($fh, $realfilename)) {
+        if (Egbk::_open_r($fh, $realfilename)) {
             local $/ = undef; # slurp mode
             my $script = <$fh>;
             close($fh) or die __FILE__, ": Can't close file: $realfilename";
@@ -5512,7 +5521,7 @@ sub e_no_nounimport {
     my $fh = gensym();
     for my $realfilename (_realfilename($expr)) {
 
-        if (open($fh, $realfilename)) {
+        if (Egbk::_open_r($fh, $realfilename)) {
             local $/ = undef; # slurp mode
             my $script = <$fh>;
             close($fh) or die __FILE__, ": Can't close file: $realfilename";
@@ -5538,7 +5547,7 @@ sub e_use_noparam {
     my $fh = gensym();
     for my $realfilename (_realfilename($expr)) {
 
-        if (open($fh, $realfilename)) {
+        if (Egbk::_open_r($fh, $realfilename)) {
             local $/ = undef; # slurp mode
             my $script = <$fh>;
             close($fh) or die __FILE__, ": Can't close file: $realfilename";
@@ -5575,7 +5584,7 @@ sub e_no_noparam {
     my $fh = gensym();
     for my $realfilename (_realfilename($expr)) {
 
-        if (open($fh, $realfilename)) {
+        if (Egbk::_open_r($fh, $realfilename)) {
             local $/ = undef; # slurp mode
             my $script = <$fh>;
             close($fh) or die __FILE__, ": Can't close file: $realfilename";
@@ -5601,7 +5610,7 @@ sub e_use {
     my $fh = gensym();
     for my $realfilename (_realfilename($expr)) {
 
-        if (open($fh, $realfilename)) {
+        if (Egbk::_open_r($fh, $realfilename)) {
             local $/ = undef; # slurp mode
             my $script = <$fh>;
             close($fh) or die __FILE__, ": Can't close file: $realfilename";
@@ -5627,7 +5636,7 @@ sub e_no {
     my $fh = gensym();
     for my $realfilename (_realfilename($expr)) {
 
-        if (open($fh, $realfilename)) {
+        if (Egbk::_open_r($fh, $realfilename)) {
             local $/ = undef; # slurp mode
             my $script = <$fh>;
             close($fh) or die __FILE__, ": Can't close file: $realfilename";
@@ -5683,6 +5692,18 @@ __END__
 
 GBK - Source code filter to escape GBK script
 
+=head1 Install and Usage
+
+There are two steps there:
+
+=over 2
+
+=item * You'll have to download GBK.pm and Egbk.pm and put it in your perl lib directory.
+
+=item * You'll need to write "use GBK;" at head of the script.
+
+=back
+
 =head1 SYNOPSIS
 
   use GBK;
@@ -5712,6 +5733,8 @@ GBK - Source code filter to escape GBK script
     GBK::substr(...);
     GBK::index(...);
     GBK::rindex(...);
+    <*>
+    glob(...);
     CORE::chop(...);
     CORE::ord(...);
     CORE::reverse(...);
@@ -5741,24 +5764,25 @@ GBK - Source code filter to escape GBK script
 
 =head1 ABSTRACT
 
-Let's start with a bit of history: jperl 4.019+1.3 introduced GBK support.
-You could apply chop() and regexps even to complex CJK characters.
+GBK software is "middleware" between perl interpreter and your Perl script
+written by GBK.
 
-JPerl in CPAN Perl Ports (Binary Distributions)
+Perl is optimized for problems which are about 90% working with text and about
+10% everything else. But this "text" means US-ASCII text, and popular GBK
+is contained in "everything else."
 
-said before,
+Please be not disappointed.
 
-  As of Perl 5.8.0 it is suggested that instead of JPerl (which is
-  based on a quite old release of Perl) you should just use Perl 5.8.0,
-  since it can do all that JPerl did, and more.
+The string of Perl3 or later can treat binary data. That is, the string of
+Perl3 or later can treat GBK.
 
-But was it really so?
+Perl is designed to make the easy jobs easy, without making the hard jobs
+impossible. GBK software is Perl program designed to make the "easy jobs easy".
 
-In this country, GBK is widely used on mainframe I/O, the personal computer,
-and the cellular phone. This software treats GBK directly, but doesn't treat
-Latin-1. Therefore, this software doesn't use UTF8 flag.
-
-Shall we escape from the encode problem?
+By "use GBK;", it automatically interpret your script as GBK. The various
+functions of perl including a regular expression can treat GBK now.
+The function length treats length per byte. This software does not use UTF8
+flag.
 
 =head1 Yet Another Future Of
 
@@ -5816,7 +5840,7 @@ I learned the following things from the successful software.
 
 =back
 
-Let's make yet another future by JPerl's future.
+I am excited about this software and its future --- I hope you are too.
 
 =head1 JRE: JPerl Runtime Environment
 
@@ -5835,7 +5859,7 @@ computer intermediate language commonly referred to as Perl byteorientedcode.
 This language conceptually represents the instruction set of a byte-oriented,
 capability architecture.
 
-=head1 Basic Idea Of Source Code Filter
+=head1 Basic Idea of Source Code Filter
 
 I discovered this mail again recently.
 
@@ -5862,6 +5886,51 @@ save as: SJIS.pm
   1;
 
 I am glad that I could confirm my idea is not so wrong.
+
+=head1 Command-line Wildcard Expansion on DOS-like Systems
+
+The default command shells on DOS-like systems (COMMAND.COM or cmd.exe) do not
+expand wildcard arguments supplied to programs. Instead, import() of Egbk.pm
+works well.
+
+   in Egbk.pm
+   #
+   # @ARGV wildcard globbing
+   #
+   sub import() {
+
+       if ($^O =~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
+           my @argv = ();
+           for (@ARGV) {
+
+               # has space
+               if (/\A (?:$q_char)*? [ ] /oxms) {
+                   if (my @glob = Egbk::glob(qq{"$_"})) {
+                       push @argv, @glob;
+                   }
+                   else {
+                       push @argv, $_;
+                   }
+               }
+
+               # has wildcard metachar
+               elsif (/\A (?:$q_char)*? [*?] /oxms) {
+                   if (my @glob = Egbk::glob($_)) {
+                       push @argv, @glob;
+                   }
+                   else {
+                       push @argv, $_;
+                   }
+               }
+
+               # no wildcard globbing
+               else {
+                   push @argv, $_;
+               }
+           }
+           @ARGV = @argv;
+       }
+   }
 
 =head1 Software Composition
 
@@ -5900,7 +5969,7 @@ I am glad that I could confirm my idea is not so wrong.
    warnings/register.pm_ --- poor warnings/register.pm
    feature.pm_           --- dummy feature.pm
 
-=head1 Upper Compatibility By Escaping
+=head1 Upper Compatibility by Escaping
 
 This software adds the function by 'Escaping' it always, and nothing of the
 past is broken. Therefore, 'Possible job' never becomes 'Impossible job'.
@@ -5962,7 +6031,7 @@ Insert chr(0x5c) before  @  [  \  ]  ^  `  {  |  and  }  in multiple-octet of
   in the perl     "`/"    [83] [5c]
   -----------------------------------------
 
-=head1 Multiple-Octet Anchoring Of Regular Expression (GBK.pm provides)
+=head1 Multiple-Octet Anchoring of Regular Expression (GBK.pm provides)
 
 GBK.pm applies multiple-octet anchoring at beginning of regular expression.
 
@@ -5993,8 +6062,8 @@ from classic Perl character class shortcuts and POSIX-style character classes.
   --------------------------------------------------------------------------------
   m/...MULTIOCT+.../      m/...(?:MULTIOCT)+.../
   m/...[AN-EM].../        m/...(?:A[N-Z]|[B-D][A-Z]|E[A-M]).../
-  m/...\D.../             m/...${Egbk::eD}.../
-  m/...[[:^digit:]].../   m/...${Egbk::not_digit}.../
+  m/...\D.../             m/...(?:${Egbk::eD}).../
+  m/...[[:^digit:]].../   m/...(?:${Egbk::not_digit}).../
   --------------------------------------------------------------------------------
 
 =head1 Calling 'Egbk::ignorecase()' (GBK.pm provides)
@@ -6167,7 +6236,7 @@ Definitions in Egbk.pm.
   ${Egbk::eB}             qr{(?:(?<=[0-9A-Z_a-z])(?=[0-9A-Z_a-z])|(?<=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF])(?=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF]))}
   ---------------------------------------------------------------------------------------------------------------------------------------------------------
 
-=head1 Un-Escaping \ Of \N, \p, \P and \X (GBK.pm provides)
+=head1 Un-Escaping \ of \N, \p, \P and \X (GBK.pm provides)
 
 GBK.pm removes '\' at head of alphanumeric regexp metasymbols \N, \p, \P
 and \X. By this method, you can avoid the trap of the abstraction.
@@ -6243,37 +6312,61 @@ functions.
 
 Insert 'Egbk::' instead of '-' of operator.
 
+  Available in MSWin32, MacOS, and UNIX-like systems
   --------------------------------------------------------------------------
   Before   After      Meaning
   --------------------------------------------------------------------------
-  -r       Egbk::r   File is readable by effective uid/gid
-  -w       Egbk::w   File is writable by effective uid/gid
-  -x       Egbk::x   File is executable by effective uid/gid
-  -o       Egbk::o   File is owned by effective uid
-  -R       Egbk::R   File is readable by real uid/gid
-  -W       Egbk::W   File is writable by real uid/gid
-  -X       Egbk::X   File is executable by real uid/gid
-  -O       Egbk::O   File is owned by real uid
-  -e       Egbk::e   File exists
-  -z       Egbk::z   File has zero size
-  -f       Egbk::f   File is a plain file
-  -d       Egbk::d   File is a directory
-  -l       Egbk::l   File is a symbolic link
-  -p       Egbk::p   File is a named pipe (FIFO)
-  -S       Egbk::S   File is a socket
-  -b       Egbk::b   File is a block special file
-  -c       Egbk::c   File is a character special file
-  -t       -t         Filehandle is opened to a tty
-  -u       Egbk::u   File has setuid bit set
-  -g       Egbk::g   File has setgid bit set
-  -k       Egbk::k   File has sticky bit set
-  -T       Egbk::T   File is a text file
-  -B       Egbk::B   File is a binary file (opposite of -T)
-  -s       Egbk::s   File has nonzero size (returns size in bytes)
-  -M       Egbk::M   Age of file (at startup) in days since modification
-  -A       Egbk::A   Age of file (at startup) in days since last access
-  -C       Egbk::C   Age of file (at startup) in days since inode change
+  -r       Egbk::r   File or directory is readable by this (effective) user or group
+  -w       Egbk::w   File or directory is writable by this (effective) user or group
+  -e       Egbk::e   File or directory name exists
+  -x       Egbk::x   File or directory is executable by this (effective) user or group
+  -z       Egbk::z   File exists and has zero size (always false for directories)
+  -f       Egbk::f   Entry is a plain file
+  -d       Egbk::d   Entry is a directory
+  -t       -t         The filehandle is a TTY (as reported by the isatty() system function;
+                      filenames can't be tested by this test)
+  -T       Egbk::T   File looks like a "text" file
+  -B       Egbk::B   File looks like a "binary" file
+  -M       Egbk::M   Modification age (measured in days)
+  -A       Egbk::A   Access age (measured in days)
+  -C       Egbk::C   Inode-modification age (measured in days)
+  -s       Egbk::s   File or directory exists and has nonzero size
+                      (the value is the size in bytes)
   --------------------------------------------------------------------------
+  
+  Available in MacOS and UNIX-like systems
+  --------------------------------------------------------------------------
+  Before   After      Meaning
+  --------------------------------------------------------------------------
+  -R       Egbk::R   File or directory is readable by this real user or group
+  -W       Egbk::W   File or directory is writable by this real user or group
+  -X       Egbk::X   File or directory is executable by this real user or group
+  -l       Egbk::l   Entry is a symbolic link
+  -S       Egbk::S   Entry is a socket
+  --------------------------------------------------------------------------
+  
+  Not available in MSWin32 and MacOS
+  --------------------------------------------------------------------------
+  Before   After      Meaning
+  --------------------------------------------------------------------------
+  -o       Egbk::o   File or directory is owned by this (effective) user
+  -O       Egbk::O   File or directory is owned by this real user
+  -p       Egbk::p   Entry is a named pipe (a "fifo")
+  -b       Egbk::b   Entry is a block-special file (like a mountable disk)
+  -c       Egbk::c   Entry is a character-special file (like an I/O device)
+  -u       Egbk::u   File or directory is setuid
+  -g       Egbk::g   File or directory is setgid
+  -k       Egbk::k   File or directory has the sticky bit set
+  --------------------------------------------------------------------------
+
+-w only inspects the read-only file attribute (FILE_ATTRIBUTE_READONLY), which
+determines whether the directory can be deleted, not whether it can be written
+to. Directories always have read and write access unless denied by
+discretionary access control lists (DACLs). (MSWin32)
+-R, -W, -X, -O are indistinguishable from -r, -w, -x, -o. (MSWin32)
+-g, -k, -l, -u, -A are not particularly meaningful. (MSWin32)
+-x (or -X) determine if a file ends in one of the executable suffixes. -S is
+meaningless. (MSWin32)
 
 As of Perl 5.00503, as a form of purely syntactic sugar, you can stack file
 test operators, in a way that -w -x $file is equivalent to -x $file && -w _ .
@@ -6324,7 +6417,7 @@ oriented function. See 'Character-Oriented Functions'.
 
 =over 2
 
-=item * Order Of Character
+=item * Ordinal Value of Character
 
   $ord = GBK::ord($string);
 
@@ -6335,7 +6428,10 @@ oriented function. See 'Character-Oriented Functions'.
   If you import ord "use GBK qw(ord);", ord of your script will be rewritten in
   GBK::ord. GBK::ord is not compatible with ord of JPerl.
 
-=item * Reverse List Or String
+  Even if you do not know this function, there is no problem. This function can
+  be created with a unpack function as before.
+
+=item * Reverse List or String
 
   @reverse = GBK::reverse(@list);
   $reverse = GBK::reverse(@list);
@@ -6350,7 +6446,14 @@ oriented function. See 'Character-Oriented Functions'.
   rewritten in GBK::reverse. GBK::reverse is not compatible with reverse of
   JPerl.
 
-=item * Length By GBK Character
+  Even if you do not know this function, there is no problem. This function can
+  be created with
+
+  $rev = join('', reverse(split(//, $jstring)));
+
+  as before.
+
+=item * Length by GBK Character
 
   $length = GBK::length($string);
   $length = GBK::length();
@@ -6367,7 +6470,14 @@ oriented function. See 'Character-Oriented Functions'.
 
   $bytes = length($string);
 
-=item * Substr By GBK Character
+  Even if you do not know this function, there is no problem. This function can
+  be created with
+
+  $len = split(//, $jstring);
+
+  as before.
+
+=item * Substr by GBK Character
 
   $substr = GBK::substr($string,$offset,$length,$replacement);
   $substr = GBK::substr($string,$offset,$length);
@@ -6404,7 +6514,7 @@ oriented function. See 'Character-Oriented Functions'.
 
   GBK::substr($var, -1, 1, "Curly");
 
-=item * Index By GBK Character
+=item * Index by GBK Character
 
   $index = GBK::index($string,$substring,$offset);
   $index = GBK::index($string,$substring);
@@ -6422,7 +6532,10 @@ oriented function. See 'Character-Oriented Functions'.
       $pos++;
   }
 
-=item * Rindex By GBK Character
+  This function is realizable with a regular expression as before. There is no
+  problem even if you do not know this function.
+
+=item * Rindex by GBK Character
 
   $rindex = GBK::rindex($string,$substring,$offset);
   $rindex = GBK::rindex($string,$substring);
@@ -6438,6 +6551,24 @@ oriented function. See 'Character-Oriented Functions'.
       print "Found at $pos\n";
       $pos--;
   }
+
+  This function is realizable with a regular expression as before. There is no
+  problem even if you do not know this function.
+
+=item * Filename Globbing
+
+  @glob = glob($expr);
+  $glob = glob($expr);
+  @glob = glob;
+  $glob = glob;
+  @glob = <*>;
+  $glob = <*>;
+
+  Performs filename expansion (globbing) on $expr, returning the next successive
+  name on each call. If $expr is omitted, $_ is globbed instead.
+
+  This operator is implemented via the Egbk::glob() function. See Egbk::glob of
+  Egbk.pm for details.
 
 =back
 
@@ -6504,7 +6635,7 @@ oriented function. See 'Character-Oriented Functions'.
 
   If no argument is given, the function chops the $_ variable.
 
-=item * Order Of Byte
+=item * Ordinal Value of Byte
 
   $ord = CORE::ord($expr);
 
@@ -6515,7 +6646,7 @@ oriented function. See 'Character-Oriented Functions'.
   If you want a signed value, use unpack('c',$expr). If you want all the bytes of
   the string converted to a list of numbers, use unpack('C*',$expr) instead.
 
-=item * Reverse List Or Byte String
+=item * Reverse List or Byte String
 
   @reverse = CORE::reverse(@list);
   $reverse = CORE::reverse(@list);
@@ -6527,7 +6658,7 @@ oriented function. See 'Character-Oriented Functions'.
   returns the reverse of that resulting string, byte by byte, regardless of
   "use GBK qw(reverse);" exists or not.
 
-=item * Index By Byte String
+=item * Index by Byte String
 
   $index = CORE::index($string,$substring,$offset);
   $index = CORE::index($string,$substring);
@@ -6544,7 +6675,7 @@ oriented function. See 'Character-Oriented Functions'.
       $pos++;
   }
 
-=item * Rindex By Byte String
+=item * Rindex by Byte String
 
   $rindex = CORE::rindex($string,$substring,$offset);
   $rindex = CORE::rindex($string,$substring);
@@ -6590,7 +6721,7 @@ You need copy built-in standard module to /Perl/site/lib/GBK and change
 
 Back to and see 'Escaping Your Script'. Enjoy hacking!!
 
-=head1 Ignore Pragmas And Modules
+=head1 Ignore Pragmas and Modules
 
   -----------------------------------------------------------
   Before                    After
@@ -6709,20 +6840,20 @@ Back to and see 'Escaping Your Script'. Enjoy hacking!!
  
  (The value '1' doesn't have the meaning)
 
-=head1 Perl5.6 Emulation On perl5.005
+=head1 Perl5.6 Emulation on perl5.005
 
   Using warnings pragma on perl5.00503 by rename files.
 
   warnings.pm_ --> warnings.pm
   warnings/register.pm_ --> warnings/register.pm
 
-=head1 Perl5.16 Emulation On perl5.005
+=head1 Perl5.16 Emulation
 
-  Using feature pragma on perl5.00503 by rename files.
+  Using feature pragma by rename files.
 
   feature.pm_ --> feature.pm
 
-=head1 BUGS AND LIMITATIONS
+=head1 BUGS, LIMITATIONS, and COMPATIBILITY
 
 I have tested and verified this software using the best of my ability.
 However, a software containing much regular expression is bound to contain
@@ -6736,6 +6867,12 @@ make this a more useful tool, please let everyone share it.
 =item * format
 
 Function "format" can't handle multiple-octet code same as original Perl.
+
+=item * cloister of regular expression
+
+The cloister (?s) and (?i) of a regular expression will not be implemented for
+the time being. Cloister (?s) can be substituted with the .(dot) and \N on /s
+modifier. Cloister (?i) can be substituted with \F...\E.
 
 =item * chdir
 
@@ -6757,7 +6894,7 @@ Bug #81839
 chdir does not work with chr(0x5C) at end of path
 http://bugs.activestate.com/show_bug.cgi?id=81839
 
-=item * GBK::substr As Lvalue
+=item * GBK::substr as Lvalue
 
 GBK::substr differs from CORE::substr, and cannot be used as a lvalue.
 To change part of a string, you can use the optional fourth argument which is the
@@ -6765,7 +6902,7 @@ replacement string.
 
 GBK::substr($string, 13, 4, "JPerl");
 
-=item * Special Variables $` And $& Need /( Capture All )/
+=item * Special Variables $` and $& need /( Capture All )/
 
   Because $` and $& use $1.
 
@@ -6783,7 +6920,7 @@ GBK::substr($string, 13, 4, "JPerl");
   ${^POSTMATCH}   Egbk::POSTMATCH()   $'
   -------------------------------------------------------------------------------------------
 
-=item * Limitation Of Regular Expression
+=item * Limitation of Regular Expression
 
 This software has limitation from \G in multibyte anchoring. On perl5.006,
 perl5.008, perl5.010, perl5.012, perl5.014 and perl5.016 it doesn't match in
@@ -6795,12 +6932,12 @@ Bug #89792
 \G can't treat over 32,767 octets
 http://bugs.activestate.com/show_bug.cgi?id=89792
 
-=item * Empty Variable In Regular Expression
+=item * Empty Variable in Regular Expression
 
 Unlike literal null string, an interpolated variable evaluated to the empty string
 can't use the most recent pattern from a previous successful regular expression.
 
-=item * Limitation Of ?? and m??
+=item * Limitation of ?? and m??
 
 Multibyte character needs ( ) which is before {n,m} {n,} {n} * and + in ?? or m??.
 As a result, you need to rewrite a script about $1,$2,$3,... You cannot use (?: )
@@ -6811,11 +6948,17 @@ As a result, you need to rewrite a script about $1,$2,$3,... You cannot use (?: 
 The look-behind assertion like (?<=[A-Z]) is not prevented from matching trail
 octet of the previous multiple-octet code.
 
-=item * Modifier /a /d /l And /u Of Regular Expression
+=item * Modifier /a /d /l and /u of Regular Expression
 
 The concept of this software is not to use two or more encoding methods at the
 same time. Therefore, modifier /a /d /l and /u are not supported.
 \d means [0-9] always.
+
+=item * ${^WIN32_SLOPPY_STAT} is ignored
+
+Even if ${^WIN32_SLOPPY_STAT} is set to a true value, file test functions Egbk::*(),
+Egbk::lstat(), and Egbk::stat() on Microsoft Windows open the file for the path
+which has chr(0x5c) at end.
 
 =back
 
@@ -6982,7 +7125,7 @@ Back when Programming Perl, 3rd ed. was written, UTF8 flag was not born
 and Perl is designed to make the easy jobs easy. This software provide
 programming environment like at that time.
 
-=head1 Words Of Learning Perl
+=head1 Words of Learning Perl
 
    Some computer scientists (the reductionists, in particular) would
   like to deny it, but people have funny-shaped minds. Mental geography
@@ -7179,6 +7322,7 @@ I am thankful to all persons.
 
  SADAHIRO Tomoyuki, The right way of using Shift_JIS
  http://homepage1.nifty.com/nomenclator/perl/shiftjis.htm
+ http://search.cpan.org/~sadahiro/
 
  Yukihiro "Matz" Matsumoto, YAPC::Asia2006 Ruby on Perl(s)
  http://www.rubyist.net/~matz/slides/yapc2006/
