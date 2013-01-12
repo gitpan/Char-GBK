@@ -90,11 +90,18 @@ dt/alphabet/sjis.txt:表
 dt/日本語/sjis.txt:表
 END
 
-open(FILE,">01grepdir.pl") || die "Can't open file: 01grepdir.pl\n";
+my $script = __FILE__ . '.pl';
+
+open(FILE,">$script") || die "Can't open file: $script\n";
 print FILE <DATA>;
 close(FILE);
 
-$_ = `$^X 01grepdir.pl aaa dt 2>NUL`;
+if ($ENV{'COMSPEC'} =~ / \\COMMAND\.COM \z/oxmsi) {
+    $_ = `$^X $script aaa dt`;
+}
+else {
+    $_ = `$^X $script aaa dt 2>NUL`;
+}
 sleep 1;
 if ($_ eq $aaa) {
     print "ok - 1 $^X $__FILE__ aaa dt \n";
@@ -105,7 +112,12 @@ else {
     print "($aaa)\n";
 }
 
-$_ = `$^X 01grepdir.pl 表 dt 2>NUL`;
+if ($ENV{'COMSPEC'} =~ / \\COMMAND\.COM \z/oxmsi) {
+    $_ = `$^X $script 表 dt`;
+}
+else {
+    $_ = `$^X $script 表 dt 2>NUL`;
+}
 sleep 1;
 if ($_ eq $hyou) {
     print "ok - 2 $^X $__FILE__ 表 dt\n";
@@ -117,8 +129,8 @@ else {
 }
 sleep 1;
 
-unlink('01grepdir.pl');
-unlink('01grepdir.pl.e');
+unlink($script);
+unlink("$script.e");
 
 unlink('dt/alphabet/alpha.txt');
 unlink('dt/alphabet/sjis.txt');
@@ -129,8 +141,8 @@ rmdir('dt/日本語');
 rmdir('dt');
 
 __END__
-# This file is encoded in GBK.
-die "This file is not encoded in GBK.\n" if q{あ} ne "\x82\xa0";
+# This file is encoded in ShiftJIS.
+die "This file is not encoded in ShiftJIS.\n" if q{あ} ne "\x82\xa0";
 
 use Char::GBK;
 

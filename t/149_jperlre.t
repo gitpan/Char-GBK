@@ -1,33 +1,68 @@
 # This file is encoded in Char::GBK.
 die "This file is not encoded in Char::GBK.\n" if q{‚ } ne "\x82\xa0";
 
-print "1..1\n";
+print "1..2\n";
 
 my $__FILE__ = __FILE__;
 
-my $null = '/dev/null';
+if ($^O eq 'MacOS') {
+    print "ok - 1 # SKIP $^X $__FILE__\n";
+    print "ok - 2 # SKIP $^X $__FILE__\n";
+    exit;
+}
+
+my $null = '';
 if ($^O =~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
-    $null = 'NUL';
+    if ($ENV{'COMSPEC'} =~ / \\COMMAND\.COM \z/oxmsi) {
+        $null = '';
+    }
+    else {
+        $null = '2>NUL';
+    }
+}
+else{
+    $null = '2>/dev/null';
 }
 
 my $script = __FILE__ . '.pl';
-open(TEST,">$script") || die "Can't open file: $script\n";
-print TEST <DATA>;
-close(TEST);
 
-if (system(qq{$^X $script 2>$null}) != 0) {
-    print "ok - 1 $^X $__FILE__ die ('-' =~ /‚ [‚¢-‚ ]/).\n";
+open(TEST,">$script") || die "Can't open file: $script\n";
+print TEST <<'END';
+use Char::GBK;
+'-' =~ /(‚ [‚ -‚¢])/;
+print "PASS\n";
+END
+close(TEST);
+eval {
+    $result = qx{$^X $script $null};
+};
+if ($result =~ /PASS/) {
+    print "ok - 1 $^X $__FILE__ die ('-' =~ /‚ [‚ -‚¢]/).\n";
 }
 else {
-    print "not ok - 1 $^X $__FILE__ die ('-' =~ /‚ [‚¢-‚ ]/).\n";
+    print "not ok - 1 $^X $__FILE__ die ('-' =~ /‚ [‚ -‚¢]/).\n";
 }
+unlink("$script");
+unlink("$script.e");
+
+open(TEST,">$script") || die "Can't open file: $script\n";
+print TEST <<'END';
+use Char::GBK;
+'-' =~ /(‚ [‚¢-‚ ])/;
+print "PASS\n";
+END
+close(TEST);
+eval {
+    $result = qx{$^X $script $null};
+};
+if ($result !~ /PASS/) {
+    print "ok - 2 $^X $__FILE__ die ('-' =~ /‚ [‚¢-‚ ]/).\n";
+}
+else {
+    print "not ok - 2 $^X $__FILE__ die ('-' =~ /‚ [‚¢-‚ ]/).\n";
+}
+unlink("$script");
+unlink("$script.e");
 
 __END__
-# This file is encoded in Char::GBK.
-die "This file is not encoded in Char::GBK.\n" if q{‚ } ne "\x82\xa0";
 
-use Char::GBK;
-
-'-' =~ /(‚ [‚¢-‚ ])/;
-
-exit 0;

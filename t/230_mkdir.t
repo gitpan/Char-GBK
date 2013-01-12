@@ -11,31 +11,26 @@ if ($^O !~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
     exit;
 }
 
-mkdir('directory',0777);
-mkdir('D機能',0777);
-open(FILE,'>D機能/file1.txt') || die "Can't open file: D機能/file1.txt\n";
-print FILE "1\n";
-close(FILE);
-open(FILE,'>D機能/file2.txt') || die "Can't open file: D機能/file2.txt\n";
-print FILE "1\n";
-close(FILE);
-open(FILE,'>D機能/file3.txt') || die "Can't open file: D機能/file3.txt\n";
-print FILE "1\n";
-close(FILE);
+if ($ENV{'COMSPEC'} =~ / \\COMMAND\.COM \z/oxmsi) {
+    system('rmdir D2機能');
+}
+else {
+    system('rmdir D2機能 2>NUL');
+}
 
 # mkdir
 if (mkdir('D2機能',0777)) {
     print "ok - 1 mkdir $^X $__FILE__\n";
-    system('rmdir D2機能 2>NUL');
 }
 else {
     print "not ok - 1 mkdir: $! $^X $__FILE__\n";
 }
 
-unlink('D機能/file1.txt');
-unlink('D機能/file2.txt');
-unlink('D機能/file3.txt');
-rmdir('directory');
-rmdir('D機能');
+if ($ENV{'COMSPEC'} =~ / \\COMMAND\.COM \z/oxmsi) {
+    system('rmdir D2機能');
+}
+else {
+    system('rmdir D2機能 2>NUL');
+}
 
 __END__

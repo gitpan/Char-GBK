@@ -3,7 +3,7 @@ package GBK;
 #
 # GBK - Source code filter to escape GBK script
 #
-# Copyright (c) 2008, 2009, 2010, 2011, 2012 INABA Hitoshi <ina@cpan.org>
+# Copyright (c) 2008, 2009, 2010, 2011, 2012, 2013 INABA Hitoshi <ina@cpan.org>
 #
 ######################################################################
 
@@ -27,7 +27,7 @@ BEGIN {
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.84 $ =~ /(\d+)/oxmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.85 $ =~ /(\d+)/oxmsg;
 
 BEGIN { require Egbk; }
 
@@ -46,9 +46,14 @@ BEGIN {
     }
 }
 
+# Column: local $@
+# in Chapter 9. Osaete okitai Perl no kiso
+# of ISBN 10: 4798119172 | ISBN 13: 978-4798119175 MODAN Perl NYUMON
+# (and so on)
+
 # use strict; if strict.pm exists
 BEGIN {
-    if (eval {CORE::require strict}) {
+    if (eval { local $@; CORE::require strict }) {
         strict::->import;
     }
 }
@@ -61,13 +66,20 @@ BEGIN {
 # in Chapter 27: Functions
 # of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
 
+# P.228 Inlining Constant Functions
+# in Chapter 6: Subroutines
+# of ISBN 0-596-00027-8 Programming Perl Third Edition.
+
+# P.331 Inlining Constant Functions
+# in Chapter 7: Subroutines
+# of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
+
 sub LOCK_SH() {1}
 sub LOCK_EX() {2}
 sub LOCK_UN() {8}
 sub LOCK_NB() {4}
 
-sub import() {}
-sub unimport() {}
+sub unimport {}
 sub GBK::escape_script;
 
 # regexp of character
@@ -190,6 +202,7 @@ my $here_script = '';     # here script
 my $function_ord;         # ord()   to ord()   or GBK::ord()
 my $function_ord_;        # ord     to ord     or GBK::ord_
 my $function_reverse;     # reverse to reverse or GBK::reverse
+my $function_getc;        # getc    to getc    or GBK::getc
 
 my $ignore_modules = join('|', qw(
     utf8
@@ -233,153 +246,172 @@ and rewrite "use $package;" to "use @{[__PACKAGE__]}::$package;" of script "$0".
 END
 }
 
-if (Egbk::e("$filename.e")) {
-    if (exists $ENV{'SJIS_DEBUG'}) {
-        Egbk::unlink "$filename.e";
-    }
-    elsif (Egbk::z("$filename.e")) {
-        Egbk::unlink "$filename.e";
-    }
-    else {
-        my $e_mtime   = (Egbk::stat("$filename.e"))[9];
-        my $mtime     = (Egbk::stat($filename))[9];
-        my $__mtime__ = (Egbk::stat(__FILE__))[9];
-        if (($e_mtime < $mtime) or ($mtime < $__mtime__)) {
+# P.302 Module Privacy and the Exporter
+# in Chapter 11: Modules
+# of ISBN 0-596-00027-8 Programming Perl Third Edition.
+#
+# A module can do anything it jolly well pleases when it's used, since use just
+# calls the ordinary import method for the module, and you can define that
+# method to do anything you like.
+
+# P.406 Module Privacy and the Exporter
+# in Chapter 11: Modules
+# of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
+#
+# A module can do anything it jolly well pleases when it's used, since use just
+# calls the ordinary import method for the module, and you can define that
+# method to do anything you like.
+
+sub import {
+
+    if (Egbk::e("$filename.e")) {
+        if (exists $ENV{'SJIS_DEBUG'}) {
             Egbk::unlink "$filename.e";
         }
+        elsif (Egbk::z("$filename.e")) {
+            Egbk::unlink "$filename.e";
+        }
+        else {
+            my $e_mtime   = (Egbk::stat("$filename.e"))[9];
+            my $mtime     = (Egbk::stat($filename))[9];
+            my $__mtime__ = (Egbk::stat(__FILE__))[9];
+            if (($e_mtime < $mtime) or ($mtime < $__mtime__)) {
+                Egbk::unlink "$filename.e";
+            }
+        }
     }
-}
 
-if (not Egbk::e("$filename.e")) {
+    if (not Egbk::e("$filename.e")) {
+        my $fh = gensym();
+
+        if (eval q{ use Fcntl qw(O_WRONLY O_APPEND O_CREAT); 1 } and CORE::sysopen($fh,"$filename.e",&O_WRONLY|&O_APPEND|&O_CREAT)) {
+        }
+        else {
+            Egbk::_open_a($fh, "$filename.e") or die __FILE__, ": Can't write open file: $filename.e";
+        }
+
+        if (0) {
+        }
+        elsif (exists $ENV{'SJIS_NONBLOCK'}) {
+
+            # P.419 File Locking
+            # in Chapter 16: Interprocess Communication
+            # of ISBN 0-596-00027-8 Programming Perl Third Edition.
+
+            # P.524 File Locking
+            # in Chapter 15: Interprocess Communication
+            # of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
+
+            # P.571 Handling Race Conditions
+            # in Chapter 23: Security
+            # of ISBN 0-596-00027-8 Programming Perl Third Edition.
+
+            # P.663 Handling Race Conditions
+            # in Chapter 20: Security
+            # of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
+
+            # (and so on)
+
+            eval q{
+                unless (flock($fh, LOCK_EX | LOCK_NB)) {
+                    warn __FILE__, ": Can't immediately write-lock the file: $filename.e";
+                    exit;
+                }
+            };
+        }
+        else {
+            eval q{ flock($fh, LOCK_EX) };
+        }
+
+        truncate($fh, 0) or die __FILE__, ": Can't truncate file: $filename.e";
+        seek($fh, 0, 0)  or die __FILE__, ": Can't seek file: $filename.e";
+
+        my $e_script = GBK::escape_script($filename);
+        print {$fh} $e_script;
+
+        my $mode = (Egbk::stat($filename))[2] & 0777;
+        chmod $mode, "$filename.e";
+
+        close($fh) or die __FILE__, ": Can't close file: $filename.e";
+    }
+
     my $fh = gensym();
-
-    if (eval q{ use Fcntl qw(O_WRONLY O_APPEND O_CREAT); 1 } and CORE::sysopen($fh,"$filename.e",&O_WRONLY|&O_APPEND|&O_CREAT)) {
-    }
-    else {
-        Egbk::_open_a($fh, "$filename.e") or die __FILE__, ": Can't write open file: $filename.e";
-    }
+    Egbk::_open_r($fh, "$filename.e") or die __FILE__, ": Can't read open file: $filename.e";
 
     if (0) {
     }
     elsif (exists $ENV{'SJIS_NONBLOCK'}) {
-
-        # P.419 File Locking
-        # in Chapter 16: Interprocess Communication
-        # of ISBN 0-596-00027-8 Programming Perl Third Edition.
-
-        # P.524 File Locking
-        # in Chapter 15: Interprocess Communication
-        # of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
-
-        # P.571 Handling Race Conditions
-        # in Chapter 23: Security
-        # of ISBN 0-596-00027-8 Programming Perl Third Edition.
-
-        # P.663 Handling Race Conditions
-        # in Chapter 20: Security
-        # of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
-
-        # (and so on)
-
         eval q{
-            unless (flock($fh, LOCK_EX | LOCK_NB)) {
-                warn __FILE__, ": Can't immediately write-lock the file: $filename.e";
+            unless (flock($fh, LOCK_SH | LOCK_NB)) {
+                warn __FILE__, ": Can't immediately read-lock the file: $filename.e";
                 exit;
             }
         };
     }
     else {
-        eval q{ flock($fh, LOCK_EX) };
+        eval q{ flock($fh, LOCK_SH) };
     }
 
-    truncate($fh, 0) or die __FILE__, ": Can't truncate file: $filename.e";
-    seek($fh, 0, 0)  or die __FILE__, ": Can't seek file: $filename.e";
+    my @switch = ();
+    if ($^W) {
+        push @switch, '-w';
+    }
 
-    my $e_script = GBK::escape_script($filename);
-    print {$fh} $e_script;
+    # P.707 29.2.33. exec
+    # in Chapter 29: Functions
+    # of ISBN 0-596-00027-8 Programming Perl Third Edition.
+    #
+    # If there is more than one argument in LIST, or if LIST is an array with more
+    # than one value, the system shell will never be used. This also bypasses any
+    # shell processing of the command. The presence or absence of metacharacters in
+    # the arguments doesn't affect this list-triggered behavior, which makes it the
+    # preferred from in security-conscious programs that do not with to expose
+    # themselves to potential shell escapes.
+    # Environment variable PERL5SHELL(Microsoft ports only) will never be used, too.
 
-    my $mode = (Egbk::stat($filename))[2] & 0777;
-    chmod $mode, "$filename.e";
+    # P.855 exec
+    # in Chapter 27: Functions
+    # of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
+    #
+    # If there is more than one argument in LIST, or if LIST is an array with more
+    # than one value, the system shell will never be used. This also bypasses any
+    # shell processing of the command. The presence or absence of metacharacters in
+    # the arguments doesn't affect this list-triggered behavior, which makes it the
+    # preferred from in security-conscious programs that do not wish to expose
+    # themselves to injection attacks via shell escapes.
+    # Environment variable PERL5SHELL(Microsoft ports only) will never be used, too.
 
-    close($fh) or die __FILE__, ": Can't close file: $filename.e";
-}
+    # P.489 #! and Quoting on Non-Unix Systems
+    # in Chapter 19: The Command-Line Interface
+    # of ISBN 0-596-00027-8 Programming Perl Third Edition.
 
-my $fh = gensym();
-Egbk::_open_r($fh, "$filename.e") or die __FILE__, ": Can't read open file: $filename.e";
+    # P.578 #! and Quoting on Non-Unix Systems
+    # in Chapter 17: The Command-Line Interface
+    # of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
 
-if (0) {
-}
-elsif (exists $ENV{'SJIS_NONBLOCK'}) {
-    eval q{
-        unless (flock($fh, LOCK_SH | LOCK_NB)) {
-            warn __FILE__, ": Can't immediately read-lock the file: $filename.e";
-            exit;
-        }
-    };
-}
-else {
-    eval q{ flock($fh, LOCK_SH) };
-}
+    # DOS-like system
+    if ($^O =~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
+        exit Egbk::_systemx
+            _escapeshellcmd_MSWin32($^X),
 
-my @switch = ();
-if ($^W) {
-    push @switch, '-w';
-}
+        # -I switch can not treat space included path
+        #   (map { '-I' . _escapeshellcmd_MSWin32($_) } @INC),
+            (map { '-I' .                         $_  } @INC),
 
-# P.707 29.2.33. exec
-# in Chapter 29: Functions
-# of ISBN 0-596-00027-8 Programming Perl Third Edition.
-#
-# If there is more than one argument in LIST, or if LIST is an array with more
-# than one value, the system shell will never be used. This also bypasses any
-# shell processing of the command. The presence or absence of metacharacters in
-# the arguments doesn't affect this list-triggered behavior, which makes it the
-# preferred from in security-conscious programs that do not with to expose
-# themselves to potential shell escapes.
-# Environment variable PERL5SHELL(Microsoft ports only) will never be used, too.
+            @switch,
+            '--',
+            map { _escapeshellcmd_MSWin32($_) } "$filename.e", @ARGV;
+    }
 
-# P.855 exec
-# in Chapter 27: Functions
-# of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
-#
-# If there is more than one argument in LIST, or if LIST is an array with more
-# than one value, the system shell will never be used. This also bypasses any
-# shell processing of the command. The presence or absence of metacharacters in
-# the arguments doesn't affect this list-triggered behavior, which makes it the
-# preferred from in security-conscious programs that do not wish to expose
-# themselves to injection attacks via shell escapes.
-# Environment variable PERL5SHELL(Microsoft ports only) will never be used, too.
-
-# P.489 #! and Quoting on Non-Unix Systems
-# in Chapter 19: The Command-Line Interface
-# of ISBN 0-596-00027-8 Programming Perl Third Edition.
-
-# P.578 #! and Quoting on Non-Unix Systems
-# in Chapter 17: The Command-Line Interface
-# of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
-
-# DOS-like system
-if ($^O =~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
-    exit Egbk::_systemx
-        _escapeshellcmd_MSWin32($^X),
-
-    # -I switch can not treat space included path
-    #   (map { '-I' . _escapeshellcmd_MSWin32($_) } @INC),
-        (map { '-I' .                         $_  } @INC),
-
-        @switch,
-        '--',
-        map { _escapeshellcmd_MSWin32($_) } "$filename.e", @ARGV;
-}
-
-# UNIX-like system
-else {
-    exit Egbk::_systemx
-        _escapeshellcmd($^X),
-        (map { '-I' . _escapeshellcmd($_) } @INC),
-        @switch,
-        '--',
-        map { _escapeshellcmd($_) } "$filename.e", @ARGV;
+    # UNIX-like system
+    else {
+        exit Egbk::_systemx
+            _escapeshellcmd($^X),
+            (map { '-I' . _escapeshellcmd($_) } @INC),
+            @switch,
+            '--',
+            map { _escapeshellcmd($_) } "$filename.e", @ARGV;
+    }
 }
 
 # escape shell command line on DOS-like system
@@ -464,10 +496,11 @@ sub GBK::escape_script {
 
         $e_script .= sprintf("use Egbk %s;\n", $GBK::VERSION); # require run-time routines version
 
-        # use GBK version qw(ord reverse);
+        # use GBK version qw(ord reverse getc);
         $function_ord     = 'ord';
         $function_ord_    = 'ord';
         $function_reverse = 'reverse';
+        $function_getc    = 'getc';
         if (s/^ \s* use \s+ GBK \s* ([^\x81-\xFE;]*) ; \s* \n? $//oxms) {
 
             # require version
@@ -501,7 +534,7 @@ END
                 }
             }
 
-            # demand ord and reverse
+            # demand ord, reverse, and getc
             if ($list !~ /\A \s* \z/oxms) {
                 local $@;
                 my @list = eval $list;
@@ -509,6 +542,7 @@ END
                     $function_ord     = 'GBK::ord'     if /\A ord \z/oxms;
                     $function_ord_    = 'GBK::ord_'    if /\A ord \z/oxms;
                     $function_reverse = 'GBK::reverse' if /\A reverse \z/oxms;
+                    $function_getc    = 'GBK::getc'    if /\A getc \z/oxms;
                 }
             }
         }
@@ -744,7 +778,7 @@ sub escape {
 
 # variable or function
     #                  $ @ % & *     $ #
-    elsif (/\G ( (?: [\$\@\%\&\*] | \$\# | -> | \b sub \b) \s* (?: split|chop|index|rindex|lc|uc|fc|chr|ord|reverse|tr|y|q|qq|qx|qw|m|s|qr|glob|lstat|opendir|stat|unlink|chdir) ) \b /oxmsgc) {
+    elsif (/\G ( (?: [\$\@\%\&\*] | \$\# | -> | \b sub \b) \s* (?: split|chop|index|rindex|lc|uc|fc|chr|ord|reverse|getc|tr|y|q|qq|qx|qw|m|s|qr|glob|lstat|opendir|stat|unlink|chdir) ) \b /oxmsgc) {
         $slash = 'div';
         return $1;
     }
@@ -908,6 +942,7 @@ sub escape {
     elsif (/\G \b ord \b           (?! \s* => )                      /oxgc) { $slash = 'div'; return $function_ord_;             }
     elsif (/\G \b glob \b          (?! \s* => )                      /oxgc) { $slash = 'm//'; return 'Egbk::glob_';             }
     elsif (/\G \b reverse \b       (?! \s* => )                      /oxgc) { $slash = 'm//'; return $function_reverse;          }
+    elsif (/\G \b getc \b          (?! \s* => )                      /oxgc) { $slash = 'm//'; return $function_getc;             }
     elsif (/\G \b opendir (\s* \( \s*) (?=[A-Za-z_])                 /oxgc) { $slash = 'm//'; return "Egbk::opendir$1*";        }
     elsif (/\G \b opendir (\s+)        (?=[A-Za-z_])                 /oxgc) { $slash = 'm//'; return "Egbk::opendir$1*";        }
     elsif (/\G \b unlink \b     (?! \s* => )                         /oxgc) { $slash = 'm//'; return 'Egbk::unlink';            }
@@ -2133,7 +2168,7 @@ E_STRING_LOOP:
 
 # variable or function
         #                             $ @ % & *     $ #
-        elsif ($string =~ /\G ( (?: [\$\@\%\&\*] | \$\# | -> | \b sub \b) \s* (?: split|chop|index|rindex|lc|uc|fc|chr|ord|reverse|tr|y|q|qq|qx|qw|m|s|qr|glob|lstat|opendir|stat|unlink|chdir) ) \b /oxmsgc) {
+        elsif ($string =~ /\G ( (?: [\$\@\%\&\*] | \$\# | -> | \b sub \b) \s* (?: split|chop|index|rindex|lc|uc|fc|chr|ord|reverse|getc|tr|y|q|qq|qx|qw|m|s|qr|glob|lstat|opendir|stat|unlink|chdir) ) \b /oxmsgc) {
             $e_string .= $1;
             $slash = 'div';
         }
@@ -2257,6 +2292,7 @@ E_STRING_LOOP:
         elsif ($string =~ /\G \b ord \b                                             /oxgc) { $e_string .= $function_ord_;             $slash = 'div'; }
         elsif ($string =~ /\G \b glob \b                                            /oxgc) { $e_string .= 'Egbk::glob_';             $slash = 'm//'; }
         elsif ($string =~ /\G \b reverse \b                                         /oxgc) { $e_string .= $function_reverse;          $slash = 'm//'; }
+        elsif ($string =~ /\G \b getc \b                                            /oxgc) { $e_string .= $function_getc;             $slash = 'm//'; }
         elsif ($string =~ /\G \b opendir (\s* \( \s*) (?=[A-Za-z_])                 /oxgc) { $e_string .= "Egbk::opendir$1*";        $slash = 'm//'; }
         elsif ($string =~ /\G \b opendir (\s+)        (?=[A-Za-z_])                 /oxgc) { $e_string .= "Egbk::opendir$1*";        $slash = 'm//'; }
         elsif ($string =~ /\G \b unlink \b                                          /oxgc) { $e_string .= 'Egbk::unlink';            $slash = 'm//'; }
@@ -5707,11 +5743,11 @@ There are two steps there:
 =head1 SYNOPSIS
 
   use GBK;
-  use GBK ver.sion;        --- require minimum version
-  use GBK ver.sion.0;      --- expects version (match or die)
-  use GBK qw(ord reverse); --- demand enhanced feature of ord and reverse
-  use GBK ver.sion qw(ord reverse);
-  use GBK ver.sion.0 qw(ord reverse);
+  use GBK ver.sion;             --- require minimum version
+  use GBK ver.sion.0;           --- expects version (match or die)
+  use GBK qw(ord reverse getc); --- demand enhanced feature of ord, reverse, and getc
+  use GBK ver.sion qw(ord reverse getc);
+  use GBK ver.sion.0 qw(ord reverse getc);
 
   # "no GBK;" not supported
 
@@ -5729,6 +5765,7 @@ There are two steps there:
   functions:
     GBK::ord(...);
     GBK::reverse(...);
+    GBK::getc(...);
     GBK::length(...);
     GBK::substr(...);
     GBK::index(...);
@@ -5738,6 +5775,7 @@ There are two steps there:
     CORE::chop(...);
     CORE::ord(...);
     CORE::reverse(...);
+    CORE::getc(...);
     CORE::index(...);
     CORE::rindex(...);
 
@@ -6385,6 +6423,7 @@ oriented function. See 'Character-Oriented Functions'.
   --------------------------------------------------------
   ord        GBK::ord
   reverse    GBK::reverse
+  getc       GBK::getc
   length     GBK::length
   substr     GBK::substr
   index      GBK::index          See 'About Indexes'
@@ -6452,6 +6491,51 @@ oriented function. See 'Character-Oriented Functions'.
   $rev = join('', reverse(split(//, $jstring)));
 
   as before.
+
+=item * Returns Next Character
+
+  $getc = GBK::getc(FILEHANDLE);
+  $getc = GBK::getc($filehandle);
+  $getc = GBK::getc;
+
+  This function returns the next character from the input file attached to FILEHANDLE.
+  It returns undef at end-of-file, or if an I/O error was encountered. If FILEHANDLE
+  is omitted, the function reads from STDIN.
+
+  This function is somewhat slow, but it's occasionally useful for single-character
+  input from the keyboard -- provided you manage to get your keyboard input
+  unbuffered. This function requests unbuffered input from the standard I/O library.
+  Unfortunately, the standard I/O library is not so standard as to provide a portable
+  way to tell the underlying operating system to supply unbuffered keyboard input to
+  the standard I/O system. To do that, you have to be slightly more clever, and in
+  an operating-system-dependent fashion. Under Unix you might say this:
+
+  if ($BSD_STYLE) {
+      system "stty cbreak </dev/tty >/dev/tty 2>&1";
+  }
+  else {
+      system "stty", "-icanon", "eol", "\001";
+  }
+
+  $key = GBK::getc;
+
+  if ($BSD_STYLE) {
+      system "stty -cbreak </dev/tty >/dev/tty 2>&1";
+  }
+  else {
+      system "stty", "icanon", "eol", "^@"; # ASCII NUL
+  }
+  print "\n";
+
+  This code puts the next character typed on the terminal in the string $key. If your
+  stty program has options like cbreak, you'll need to use the code where $BSD_STYLE
+  is true. Otherwise, you'll need to use the code where it is false.
+
+  If you import getc "use GBK qw(getc);", getc of your script will be rewritten in
+  GBK::getc. GBK::getc is not compatible with getc of JPerl.
+
+  Even if you do not know this function, there is no problem. This function can
+  be created with CORE::getc as before.
 
 =item * Length by GBK Character
 
@@ -6657,6 +6741,45 @@ oriented function. See 'Character-Oriented Functions'.
   In scalar context, the function concatenates all the elements of @list and then
   returns the reverse of that resulting string, byte by byte, regardless of
   "use GBK qw(reverse);" exists or not.
+
+=item * Returns Next Byte
+
+  $getc = CORE::getc(FILEHANDLE);
+  $getc = CORE::getc($filehandle);
+  $getc = CORE::getc;
+
+  This function returns the next byte from the input file attached to FILEHANDLE.
+  It returns undef at end-of-file, or if an I/O error was encountered. If
+  FILEHANDLE is omitted, the function reads from STDIN.
+
+  This function is somewhat slow, but it's occasionally useful for single-byte
+  input from the keyboard -- provided you manage to get your keyboard input
+  unbuffered. This function requests unbuffered input from the standard I/O library.
+  Unfortunately, the standard I/O library is not so standard as to provide a portable
+  way to tell the underlying operating system to supply unbuffered keyboard input to
+  the standard I/O system. To do that, you have to be slightly more clever, and in
+  an operating-system-dependent fashion. Under Unix you might say this:
+
+  if ($BSD_STYLE) {
+      system "stty cbreak </dev/tty >/dev/tty 2>&1";
+  }
+  else {
+      system "stty", "-icanon", "eol", "\001";
+  }
+
+  $key = CORE::getc;
+
+  if ($BSD_STYLE) {
+      system "stty -cbreak </dev/tty >/dev/tty 2>&1";
+  }
+  else {
+      system "stty", "icanon", "eol", "^@"; # ASCII NUL
+  }
+  print "\n";
+
+  This code puts the next single-byte typed on the terminal in the string $key.
+  If your stty program has options like cbreak, you'll need to use the code where
+  $BSD_STYLE is true. Otherwise, you'll need to use the code where it is false.
 
 =item * Index by Byte String
 
@@ -7013,7 +7136,7 @@ to real encode of string. Thus you must debug about UTF8 flag, before
 your script. How to solve it by returning to a past method, let's drag out
 page 402 of the old dusty Programming Perl, 3rd ed. again.
 
-  Information processing model with this software
+  Information processing model beginning with perl3 or this software.
 
     +--------------------------------------------+
     |       Text strings as Binary strings       |
@@ -7235,6 +7358,13 @@ programming environment like at that time.
  Futato, Irving, Jepson, Patwardhan, Siever
  ISBN 10: 1-56592-370-7
  http://shop.oreilly.com/product/9781565923706.do
+
+ MODAN Perl NYUMON
+ By Daisuke Maki
+ 2009/2/10
+ Pages: 344
+ ISBN 10: 4798119172 | ISBN 13: 978-4798119175
+ http://www.seshop.com/product/detail/10250/
 
  Understanding Japanese Information Processing
  By Ken Lunde

@@ -265,7 +265,6 @@ t/221_sysopen.t
 t/222_system.t
 t/223_truncate.t
 t/224_unlink.t
-t/225_utime.t
 t/226_chdir.t
 t/227_chmod.t
 t/228_chown.t
@@ -374,3 +373,7 @@ t/334_charclass_ni.t
 t/335_negated_s.t
 t/336_tachitsuteto.t
 t/338_regexp_z.t
+t/339_getc.t
+t/340_getc.t
+t/341_getc.t
+t/342_getc.t

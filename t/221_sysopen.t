@@ -20,8 +20,9 @@ print FILE "1\n";
 close(FILE);
 
 # sysopen
-use Fcntl;
-if (sysopen(FILE,'F機能',O_RDONLY)) {
+# use Fcntl;
+my $O_RDONLY = 0;
+if (sysopen(FILE,'F機能',$O_RDONLY)) {
     print "ok - 1 sysopen $^X $__FILE__\n";
     close(FILE);
 }

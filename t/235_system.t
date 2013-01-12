@@ -24,7 +24,14 @@ print FILE "1\n";
 close(FILE);
 
 # system
-if (system('dir /b D機能 >NUL 2>NUL') == 0) {
+my $command;
+if ($ENV{'COMSPEC'} =~ / \\COMMAND\.COM \z/oxmsi) {
+    $command = 'dir /b D機能 >NUL';
+}
+else {
+    $command = 'dir /b D機能 >NUL 2>NUL';
+}
+if (system($command) == 0) {
     print "ok - 1 system $^X $__FILE__\n";
 }
 else {

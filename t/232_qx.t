@@ -4,40 +4,48 @@ die "This file is not encoded in Char::GBK.\n" if q{あ} ne "\x82\xa0";
 my $__FILE__ = __FILE__;
 
 use Char::GBK;
-print "1..1\n";
+print "1..2\n";
 
 if ($^O !~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
     print "ok - 1 # SKIP $^X $0\n";
+    print "ok - 2 # SKIP $^X $0\n";
     exit;
 }
 
-mkdir('directory',0777);
-mkdir('D機能',0777);
-open(FILE,'>D機能/file1.txt') || die "Can't open file: D機能/file1.txt\n";
-print FILE "1\n";
-close(FILE);
-open(FILE,'>D機能/file2.txt') || die "Can't open file: D機能/file2.txt\n";
-print FILE "1\n";
-close(FILE);
-open(FILE,'>D機能/file3.txt') || die "Can't open file: D機能/file3.txt\n";
-print FILE "1\n";
-close(FILE);
+my @qx = ();
 
-# qx
-system('echo 1 >D機能\\qx.txt');
-my @qx = split /\n/, `dir /b D機能 2>NUL`;
+mkdir('directory',0777);
+system('echo 1 >directory\\qx.txt');
+if ($ENV{'COMSPEC'} =~ / \\COMMAND\.COM \z/oxmsi) {
+    @qx = split /\n/, `dir /b directory`;
+}
+else{
+    @qx = split /\n/, `dir /b directory 2>NUL`;
+}
 if (@qx) {
     print "ok - 1 qx $^X $__FILE__\n";
 }
 else {
     print "not ok - 1 qx: $! $^X $__FILE__\n";
 }
-system('del D機能\\qx.txt');
-
-unlink('D機能/file1.txt');
-unlink('D機能/file2.txt');
-unlink('D機能/file3.txt');
+system('del directory\\qx.txt');
 rmdir('directory');
+
+mkdir('D機能',0777);
+system('echo 1 >D機能\\qx.txt');
+if ($ENV{'COMSPEC'} =~ / \\COMMAND\.COM \z/oxmsi) {
+    @qx = split /\n/, `dir /b D機能`;
+}
+else{
+    @qx = split /\n/, `dir /b D機能 2>NUL`;
+}
+if (@qx) {
+    print "ok - 2 qx $^X $__FILE__\n";
+}
+else {
+    print "not ok - 2 qx: $! $^X $__FILE__\n";
+}
+system('del D機能\\qx.txt');
 rmdir('D機能');
 
 __END__

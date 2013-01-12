@@ -40,14 +40,15 @@ else {
 }
 
 # rename (3/3)
+unlink('F2機能');
 if (rename('F機能','F2機能')) {
     print "ok - 3 rename (3/3) $^X $__FILE__\n";
-    system('del F2機能 2>NUL');
 }
 else {
     print "not ok - 3 rename: $! $^X $__FILE__\n";
 }
 
 unlink('F機能');
+unlink('F2機能');
 
 __END__

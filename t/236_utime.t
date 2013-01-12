@@ -1,44 +1,47 @@
 # This file is encoded in Char::GBK.
 die "This file is not encoded in Char::GBK.\n" if q{あ} ne "\x82\xa0";
 
+use Char::GBK;
+print "1..2\n";
+
 my $__FILE__ = __FILE__;
 
-use Char::GBK;
-print "1..1\n";
+if ($^O eq 'MacOS') {
+    print "ok - 1 # SKIP $^X $0\n";
+    print "ok - 2 # SKIP $^X $0\n";
+    exit;
+}
 
 my $chcp = '';
 if ($^O =~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
     $chcp = `chcp`;
 }
-if ($chcp !~ /932|950/oxms) {
+if ($chcp !~ /932/oxms) {
     print "ok - 1 # SKIP $^X $0\n";
+    print "ok - 2 # SKIP $^X $0\n";
     exit;
 }
 
-mkdir('directory',0777);
-mkdir('D機能',0777);
-open(FILE,'>D機能/file1.txt') || die "Can't open file: D機能/file1.txt\n";
+open(FILE,'>file') || die "Can't open file: file\n";
 print FILE "1\n";
 close(FILE);
-open(FILE,'>D機能/file2.txt') || die "Can't open file: D機能/file2.txt\n";
-print FILE "1\n";
-close(FILE);
-open(FILE,'>D機能/file3.txt') || die "Can't open file: D機能/file3.txt\n";
-print FILE "1\n";
-close(FILE);
-
-# utime
-if (utime(time(),time(),'D機能')) {
+if (utime(time(),time(),'file')) {
     print "ok - 1 utime $^X $__FILE__\n";
 }
 else {
-    print "not - ok 1 utime: $! $^X $__FILE__\n";
+    print "not ok - 1 utime: $! $^X $__FILE__\n";
 }
+unlink('file');
 
-unlink('D機能/file1.txt');
-unlink('D機能/file2.txt');
-unlink('D機能/file3.txt');
-rmdir('directory');
-rmdir('D機能');
+open(FILE,'>F機能') || die "Can't open file: F機能\n";
+print FILE "1\n";
+close(FILE);
+if (utime(time(),time(),'F機能')) {
+    print "ok - 2 utime $^X $__FILE__\n";
+}
+else {
+    print "not ok - 2 utime: $! $^X $__FILE__\n";
+}
+unlink('F機能');
 
 __END__
