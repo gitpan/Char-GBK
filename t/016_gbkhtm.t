@@ -6,10 +6,10 @@ print "1..1\n";
 
 # マッチしないはずなのにマッチする（２）
 if ("兄弟" =~ /Z/) {
-    print qq<not ok - 1 "KYODAI" =~ /Z/>;
+    print qq<not ok - 1 "KYODAI" =~ /Z/\n>;
 }
 else {
-    print qq<ok - 1 "KYODAI" =~ /Z/>;
+    print qq<ok - 1 "KYODAI" =~ /Z/\n>;
 }
 
 __END__

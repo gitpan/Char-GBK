@@ -6,10 +6,10 @@ print "1..1\n";
 
 # マッチするはずなのにマッチしない（１）
 if ("運転免許" =~ m'運転') {
-    print qq<ok - 1 "UNTENMENKYO" =~ m'UNTEN'>;
+    print qq<ok - 1 "UNTENMENKYO" =~ m'UNTEN'\n>;
 }
 else {
-    print qq<not ok - 1 "UNTENMENKYO" =~ m'UNTEN'>;
+    print qq<not ok - 1 "UNTENMENKYO" =~ m'UNTEN'\n>;
 }
 
 __END__

@@ -6,10 +6,10 @@ print "1..1\n";
 
 # マッチしないはずなのにマッチする（１）
 if ("ヤカン" =~ /ポット/) {
-    print qq<not ok - 1 "YAKAN" =~ /POTTO/>;
+    print qq<not ok - 1 "YAKAN" =~ /POTTO/\n>;
 }
 else {
-    print qq<ok - 1 "YAKAN" =~ /POTTO/>;
+    print qq<ok - 1 "YAKAN" =~ /POTTO/\n>;
 }
 
 __END__

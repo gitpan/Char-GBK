@@ -27,7 +27,7 @@ BEGIN {
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.85 $ =~ /(\d+)/oxmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.86 $ =~ /(\d+)/oxmsg;
 
 BEGIN { require Char::Egbk; }
 
@@ -391,7 +391,7 @@ sub import {
 
     # DOS-like system
     if ($^O =~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
-        exit Char::Egbk::_systemx
+        exit Char::Egbk::_systemx(
             _escapeshellcmd_MSWin32($^X),
 
         # -I switch can not treat space included path
@@ -400,17 +400,19 @@ sub import {
 
             @switch,
             '--',
-            map { _escapeshellcmd_MSWin32($_) } "$filename.e", @ARGV;
+            map { _escapeshellcmd_MSWin32($_) } "$filename.e", @ARGV
+        );
     }
 
     # UNIX-like system
     else {
-        exit Char::Egbk::_systemx
+        exit Char::Egbk::_systemx(
             _escapeshellcmd($^X),
             (map { '-I' . _escapeshellcmd($_) } @INC),
             @switch,
             '--',
-            map { _escapeshellcmd($_) } "$filename.e", @ARGV;
+            map { _escapeshellcmd($_) } "$filename.e", @ARGV
+        );
     }
 }
 
@@ -7054,6 +7056,8 @@ see also,
 Bug #89792
 \G can't treat over 32,767 octets
 http://bugs.activestate.com/show_bug.cgi?id=89792
+[perl #116379] \G can't treat over 32767 octet
+http://www.nntp.perl.org/group/perl.perl5.porters/2013/01/msg197320.html
 
 =item * Empty Variable in Regular Expression
 
@@ -7488,6 +7492,9 @@ I am thankful to all persons.
  http://gihyo.jp/dev/serial/01/modern-perl/0031
  http://gihyo.jp/dev/serial/01/modern-perl/0032
  http://gihyo.jp/dev/serial/01/modern-perl/0033
+
+ Fuji, Goro (gfx), Perl Hackers Hub No.16
+ http://gihyo.jp/dev/serial/01/perl-hackers-hub/001602
 
  Dan Kogai, Encode module
  http://search.cpan.org/dist/Encode/
