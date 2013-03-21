@@ -3,8 +3,9 @@ package Egbk;
 #
 # Egbk - Run-time routines for GBK.pm
 #
-# Copyright (c) 2008, 2009, 2010, 2011, 2012, 2013 INABA Hitoshi <ina@cpan.org>
+# http://search.cpan.org/dist/Char-GBK/
 #
+# Copyright (c) 2008, 2009, 2010, 2011, 2012, 2013 INABA Hitoshi <ina@cpan.org>
 ######################################################################
 
 use 5.00503;
@@ -27,7 +28,7 @@ BEGIN {
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.86 $ =~ /(\d+)/xmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.87 $ =~ /(\d+)/xmsg;
 
 BEGIN {
     my $PERL5LIB = __FILE__;
@@ -4567,40 +4568,170 @@ sub Egbk::chdir(;$) {
             if (not $@) {
                 return $chdir;
             }
-            else {
-                return 0;
+        }
+
+        # old idea (Win32 module required)
+        elsif (0) {
+            local $@;
+            my $shortdir = '';
+            my $chdir = eval q{
+                use Win32;
+                $shortdir = Win32::GetShortPathName($dir);
+                if ($shortdir ne $dir) {
+                    return CORE::chdir $shortdir;
+                }
+                else {
+                    return 0;
+                }
+            };
+            if ($@) {
+                my @char = $dir =~ /\G ($q_char) /oxmsg;
+                while ($char[-1] eq "\x5C") {
+                    pop @char;
+                }
+                $dir = join '', @char;
+                croak "Perl$] can't chdir to $dir (chr(0x5C) ended path), Win32.pm module may help you";
+            }
+            elsif ($shortdir eq $dir) {
+                my @char = $dir =~ /\G ($q_char) /oxmsg;
+                while ($char[-1] eq "\x5C") {
+                    pop @char;
+                }
+                $dir = join '', @char;
+                croak "Perl$] can't chdir to $dir (chr(0x5C) ended path)";
+            }
+            return $chdir;
+        }
+
+        # rejected idea ...
+        elsif (0) {
+
+            # MSDN SetCurrentDirectory function
+            # http://msdn.microsoft.com/ja-jp/library/windows/desktop/aa365530(v=vs.85).aspx
+            #
+            # Data Execution Prevention (DEP)
+            # http://vlaurie.com/computers2/Articles/dep.htm
+            #
+            # Learning x86 assembler with Perl -- Shibuya.pm#11
+            # http://developer.cybozu.co.jp/takesako/2009/06/perl-x86-shibuy.html
+            #
+            # Introduction to Win32::API programming in Perl
+            # http://d.hatena.ne.jp/TAKESAKO/20090324/1237879559
+            #
+            # DynaLoader - Dynamically load C libraries into Perl code
+            # http://perldoc.perl.org/DynaLoader.html
+            #
+            # Basic knowledge of DynaLoader
+            # http://blog.64p.org/entry/20090313/1236934042
+
+            if (($^O eq 'MSWin32') and ($ENV{'PROCESSOR_ARCHITECTURE'} eq 'x86') and eval(q{CORE::require 'Dyna'.'Loader'})) {
+                my $x86 = join('',
+
+                    # PUSH Iv
+                    "\x68", pack('P', "$dir\\\0"),
+
+                    # MOV eAX, Iv
+                    "\xb8", pack('L',
+                        *{'Dyna'.'Loader::dl_find_symbol'}{'CODE'}->(
+                            *{'Dyna'.'Loader::dl_load_file'}{'CODE'}->("$ENV{'SystemRoot'}\\system32\\kernel32.dll"),
+                            'SetCurrentDirectoryA'
+                        )
+                    ),
+
+                    # CALL eAX
+                    "\xff\xd0",
+
+                    # RETN
+                    "\xc3",
+                );
+                *{'Dyna'.'Loader::dl_install_xsub'}{'CODE'}->('_SetCurrentDirectoryA', unpack('L', pack 'P', $x86));
+                _SetCurrentDirectoryA();
+                chomp(my $chdir = qx{chdir});
+                if (Egbk::fc($chdir) eq Egbk::fc($dir)) {
+                    return 1;
+                }
+                else {
+                    return 0;
+                }
             }
         }
 
-        local $@;
         my $shortdir = '';
-        my $chdir = eval q{
-            use Win32;
-            $shortdir = Win32::GetShortPathName($dir);
-            if ($shortdir ne $dir) {
-                return CORE::chdir $shortdir;
+        my $i = 0;
+        my @subdir = ();
+        while ($dir =~ / \G ($q_char) /oxgc) {
+            my $char = $1;
+            if (($char eq '\\') or ($char eq '/')) {
+                $i++;
+                $subdir[$i] = $char;
+                $i++;
             }
             else {
-                return 0;
+                $subdir[$i] .= $char;
             }
-        };
-        if ($@) {
-            my @char = $dir =~ /\G ($q_char) /oxmsg;
-            while ($char[-1] eq "\x5C") {
-                pop @char;
-            }
-            $dir = join '', @char;
-            croak "Perl$] can't chdir to $dir (chr(0x5C) ended path), Win32.pm module may help you";
         }
-        elsif ($shortdir eq $dir) {
-            my @char = $dir =~ /\G ($q_char) /oxmsg;
-            while ($char[-1] eq "\x5C") {
-                pop @char;
-            }
-            $dir = join '', @char;
-            croak "Perl$] can't chdir to $dir (chr(0x5C) ended path)";
+        if (($subdir[-1] eq '\\') or ($subdir[-1] eq '/')) {
+            pop @subdir;
         }
-        return $chdir;
+
+        # Windows 95, Windows 98, Windows 98 Second Edition, Windows Millennium Edition
+        if ($ENV{'COMSPEC'} =~ / \\COMMAND\.COM \z/oxmsi) {
+            chomp(my @dirx = grep /<DIR>/oxms, qx{dir /ad "$dir*"});
+            for my $dirx (sort { CORE::length($a) <=> CORE::length($b) } @dirx) {
+                if (Egbk::fc(CORE::substr $dirx,-CORE::length($subdir[-1]),CORE::length($subdir[-1])) eq Egbk::fc($subdir[-1])) {
+
+                    # short file name (8dot3name) here-----v
+                    my $shortleafdir = CORE::substr $dirx, 0, 8+1+3;
+                    CORE::substr($shortleafdir,8,1) = '.';
+                    $shortleafdir =~ s/ \. [ ]+ \z//oxms;
+                    $shortdir = join '', @subdir[0..$#subdir-1], $shortleafdir;
+                    last;
+                }
+            }
+        }
+
+        # Windows NT, Windows 2000
+        elsif (qx{ver 2>NUL} =~ /\b(?:Windows NT|Windows 2000)\b/oms) {
+            chomp(my @dirx = grep /<DIR>/oxms, qx{dir /x "$dir*" 2>NUL});
+            for my $dirx (sort { CORE::length($a) <=> CORE::length($b) } @dirx) {
+                if (Egbk::fc(CORE::substr $dirx,-CORE::length($subdir[-1]),CORE::length($subdir[-1])) eq Egbk::fc($subdir[-1])) {
+
+                    # short file name (8dot3name) here-----vv
+                    my $shortleafdir = CORE::substr $dirx, 39, 8+1+3;
+                    $shortleafdir =~ s/ [ ]+ \z//oxms;
+                    $shortdir = join '', @subdir[0..$#subdir-1], $shortleafdir;
+                    last;
+                }
+            }
+        }
+
+        # an idea (not so portable, only Windows 2000 or later)
+        elsif (0) {
+            chomp($shortdir = qx{for %I in ("$dir") do \@echo %~sI 2>NUL});
+        }
+
+        # Other Windows
+        else {
+            chomp(my @dirx = grep /<DIR>/oxms, qx{dir /x "$dir*" 2>NUL});
+            for my $dirx (sort { CORE::length($a) <=> CORE::length($b) } @dirx) {
+                if (Egbk::fc(CORE::substr $dirx,-CORE::length($subdir[-1]),CORE::length($subdir[-1])) eq Egbk::fc($subdir[-1])) {
+
+                    # short file name (8dot3name) here-----vv
+                    my $shortleafdir = CORE::substr $dirx, 36, 8+1+3;
+                    $shortleafdir =~ s/ [ ]+ \z//oxms;
+                    $shortdir = join '', @subdir[0..$#subdir-1], $shortleafdir;
+                    last;
+                }
+            }
+        }
+
+        if ($shortdir eq '') {
+            return 0;
+        }
+        elsif (Egbk::fc($shortdir) eq Egbk::fc($dir)) {
+            return 0;
+        }
+        return CORE::chdir $shortdir;
     }
     else {
         return CORE::chdir $dir;

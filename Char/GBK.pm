@@ -3,8 +3,9 @@ package Char::GBK;
 #
 # Char::GBK - Source code filter to escape GBK script
 #
-# Copyright (c) 2008, 2009, 2010, 2011, 2012, 2013 INABA Hitoshi <ina@cpan.org>
+# http://search.cpan.org/dist/Char-Char::GBK/
 #
+# Copyright (c) 2008, 2009, 2010, 2011, 2012, 2013 INABA Hitoshi <ina@cpan.org>
 ######################################################################
 
 use 5.00503;
@@ -27,7 +28,7 @@ BEGIN {
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.86 $ =~ /(\d+)/oxmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.87 $ =~ /(\d+)/oxmsg;
 
 BEGIN { require Char::Egbk; }
 
@@ -846,7 +847,7 @@ sub escape {
     # (and so on)
 
     elsif (/\G (-[rwxoRWXOezfdlpSbcugkTB](?:\s+-[rwxoRWXOezfdlpSbcugkTB])+)
-                                                          \s* (\") ((?:$qq_char)+?)            (\") /oxgc) { $slash = 'm//'; return "Char::Egbk::filetest(qw($1)," . e_qq('',  $2,$4,$3) . ")"; }
+                                                         \s* (\") ((?:$qq_char)+?)             (\") /oxgc) { $slash = 'm//'; return "Char::Egbk::filetest(qw($1)," . e_qq('',  $2,$4,$3) . ")"; }
     elsif (/\G ((?:-[rwxoRWXOezfdlpSbcugkTB]\s+){2,}) qq \s* (\#) ((?:$qq_char)+?)             (\#) /oxgc) { $slash = 'm//'; return "Char::Egbk::filetest(qw($1)," . e_qq('qq',$2,$4,$3) . ")"; }
     elsif (/\G ((?:-[rwxoRWXOezfdlpSbcugkTB]\s+){2,}) qq \s* (\() ((?:$qq_paren)+?)            (\)) /oxgc) { $slash = 'm//'; return "Char::Egbk::filetest(qw($1)," . e_qq('qq',$2,$4,$3) . ")"; }
     elsif (/\G ((?:-[rwxoRWXOezfdlpSbcugkTB]\s+){2,}) qq \s* (\{) ((?:$qq_brace)+?)            (\}) /oxgc) { $slash = 'm//'; return "Char::Egbk::filetest(qw($1)," . e_qq('qq',$2,$4,$3) . ")"; }
@@ -855,7 +856,7 @@ sub escape {
     elsif (/\G ((?:-[rwxoRWXOezfdlpSbcugkTB]\s+){2,}) qq \s* (\S) ((?:$qq_char)+?)             (\3) /oxgc) { $slash = 'm//'; return "Char::Egbk::filetest(qw($1)," . e_qq('qq',$2,$4,$3) . ")"; }
 
     elsif (/\G (-[rwxoRWXOezfdlpSbcugkTB](?:\s+-[rwxoRWXOezfdlpSbcugkTB])+)
-                                                          \s* (\') ((?:\\\1|\\\\|$q_char)+?)   (\') /oxgc) { $slash = 'm//'; return "Char::Egbk::filetest(qw($1)," . e_q ('',  $2,$4,$3) . ")"; }
+                                                         \s* (\') ((?:\\\1|\\\\|$q_char)+?)    (\') /oxgc) { $slash = 'm//'; return "Char::Egbk::filetest(qw($1)," . e_q ('',  $2,$4,$3) . ")"; }
     elsif (/\G ((?:-[rwxoRWXOezfdlpSbcugkTB]\s+){2,}) q  \s* (\#) ((?:\\\#|\\\\|$q_char)+?)    (\#) /oxgc) { $slash = 'm//'; return "Char::Egbk::filetest(qw($1)," . e_q ('q', $2,$4,$3) . ")"; }
     elsif (/\G ((?:-[rwxoRWXOezfdlpSbcugkTB]\s+){2,}) q  \s* (\() ((?:\\\)|\\\\|$q_paren)+?)   (\)) /oxgc) { $slash = 'm//'; return "Char::Egbk::filetest(qw($1)," . e_q ('q', $2,$4,$3) . ")"; }
     elsif (/\G ((?:-[rwxoRWXOezfdlpSbcugkTB]\s+){2,}) q  \s* (\{) ((?:\\\}|\\\\|$q_brace)+?)   (\}) /oxgc) { $slash = 'm//'; return "Char::Egbk::filetest(qw($1)," . e_q ('q', $2,$4,$3) . ")"; }
@@ -5930,14 +5931,14 @@ I am glad that I could confirm my idea is not so wrong.
 =head1 Command-line Wildcard Expansion on DOS-like Systems
 
 The default command shells on DOS-like systems (COMMAND.COM or cmd.exe) do not
-expand wildcard arguments supplied to programs. Instead, import() of Char/Egbk.pm
+expand wildcard arguments supplied to programs. Instead, import of Char/Egbk.pm
 works well.
 
    in Char/Egbk.pm
    #
    # @ARGV wildcard globbing
    #
-   sub import() {
+   sub import {
 
        if ($^O =~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
            my @argv = ();
@@ -7010,14 +7011,14 @@ On perl5.006 or perl5.00800, if path is ended by chr(0x5C), it needs jacode.pl
 library.
 
 On perl5.008001 or later, perl5.010, perl5.012, perl5.014, perl5.016, if path is
-ended by chr(0x5C), it needs Win32 module. Chdir succeeds when a short path name
-can be acquired according to Win32::GetShortPathName(). However, the current
-directory is a short path name.
+ended by chr(0x5C), chdir succeeds when a short path name (8dot3name) can be
+acquired according to COMMAND.COM or cmd.exe. However, leaf-subdirectory of the
+current directory is a short path name (8dot3name).
 
-see also,
-Bug #81839
-chdir does not work with chr(0x5C) at end of path
-http://bugs.activestate.com/show_bug.cgi?id=81839
+  see also,
+  Bug #81839
+  chdir does not work with chr(0x5C) at end of path
+  http://bugs.activestate.com/show_bug.cgi?id=81839
 
 =item * Char::GBK::substr as Lvalue
 
@@ -7052,12 +7053,25 @@ perl5.008, perl5.010, perl5.012, perl5.014 and perl5.016 it doesn't match in
 the place in which it should match at over 32,767 octets. Moreover, at that
 time, neither the error nor warning are displayed.
 
-see also,
-Bug #89792
-\G can't treat over 32,767 octets
-http://bugs.activestate.com/show_bug.cgi?id=89792
-[perl #116379] \G can't treat over 32767 octet
-http://www.nntp.perl.org/group/perl.perl5.porters/2013/01/msg197320.html
+  see also,
+  
+  Bug #89792 \G can't treat over 32,767 octets
+  http://bugs.activestate.com/show_bug.cgi?id=89792
+  
+  [perl #116379] \G can't treat over 32767 octet
+  http://www.nntp.perl.org/group/perl.perl5.porters/2013/01/msg197320.html
+  
+  perlre - Perl regular expressions
+  http://perldoc.perl.org/perlre.html
+  
+  regexp limit to 32767 is too small
+  http://markmail.org/message/vtdmaxsa6xqb7fcz
+  
+  regexp limit to 32767 is too small?
+  http://markmail.org/thread/bmmcshbtndbwr3j3
+  
+  perlre length limit
+  http://stackoverflow.com/questions/4592467/perlre-length-limit
 
 =item * Empty Variable in Regular Expression
 
@@ -7407,7 +7421,7 @@ programming environment like at that time.
  http://shop.oreilly.com/product/9780596520694.do
 
  JIS KANJI JITEN
- Kouji Shibano
+ By Kouji Shibano
  Pages: 1456
  ISBN 4-542-20129-5
  http://www.webstore.jsa.or.jp/lib/lib.asp?fn=/manual/mnl01_12.htm
@@ -7424,6 +7438,20 @@ programming environment like at that time.
  Pages: 350
  ISBN 10: 1881957322 | ISBN 13: 978-1881957324
  http://www.amazon.com/Macperl-Power-Ease-Vicki-Brown/dp/1881957322
+
+ Windows NT Shell Scripting
+ By Timothy Hill
+ April 27, 1998
+ Pages: 400
+ ISBN 10: 1578700477 | ISBN 13: 9781578700479
+ http://search.barnesandnoble.com/Windows-NT-Shell-Scripting/Timothy-Hill/e/9781578700479/
+
+ Windows(R) Command-Line Administrators Pocket Consultant, 2nd Edition
+ By William R. Stanek
+ February 2009
+ Pages: 594
+ ISBN 10: 0-7356-2262-0 | ISBN 13: 978-0-7356-2262-3
+ http://shop.oreilly.com/product/9780735622623.do
 
  Other Tools
  http://search.cpan.org/dist/jacode/
@@ -7468,7 +7496,8 @@ I am thankful to all persons.
  http://www.rakunet.org/tsnet/TSabc/18/546.html
 
  Hiroaki Izumi, Perl5.8/Perl5.10 is not useful on the Windows.
- http://www.aritia.jp/hizumi/perl/perlwin.html
+ http://dl.dropbox.com/u/23756062/perlwin.html
+ https://sites.google.com/site/hiroa63iz/perlwin
 
  TSUKAMOTO Makio, Perl memo/file path of Windows
  http://digit.que.ne.jp/work/wiki.cgi?Perl%E3%83%A1%E3%83%A2%2FWindows%E3%81%A7%E3%81%AE%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%83%91%E3%82%B9
