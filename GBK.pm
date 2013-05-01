@@ -28,7 +28,7 @@ BEGIN {
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.87 $ =~ /(\d+)/oxmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.88 $ =~ /(\d+)/oxmsg;
 
 BEGIN { require Egbk; }
 
@@ -565,6 +565,12 @@ END
 
     # one member of Tag-team
     #
+    # P.128 Start of match (or end of previous match): \G
+    # P.130 Advanced Use of \G with Perl
+    # in Chapter 3: Overview of Regular Expression Features and Flavors
+    # P.255 Use leading anchors
+    # P.256 Expose ^ and \G at the front expressions
+    # in Chapter 6: Crafting an Efficient Expression
     # P.315 "Tag-team" matching with /gc
     # in Chapter 7: Perl
     # of ISBN 0-596-00289-0 Mastering Regular Expressions, Second edition
@@ -4710,10 +4716,11 @@ sub e_sub {
     $slash = 'div';
 
     # P.128 Start of match (or end of previous match): \G
+    # P.130 Advanced Use of \G with Perl
     # in Chapter 3: Overview of Regular Expression Features and Flavors
     # P.312 Iterative Matching: Scalar Context, with /g
     # in Chapter 7: Perl
-    # of ISBN 0-596-00272-6 Mastering Regular Expressions, Second edition
+    # of ISBN 0-596-00289-0 Mastering Regular Expressions, Second edition
 
     # P.181 Where You Left Off: The \G Assertion
     # in Chapter 5: Pattern Matching
@@ -5806,19 +5813,11 @@ There are two steps there:
 =head1 ABSTRACT
 
 GBK software is "middleware" between perl interpreter and your Perl script
-written by GBK.
+written in GBK.
 
 Perl is optimized for problems which are about 90% working with text and about
-10% everything else. But this "text" means US-ASCII text, and popular GBK
-is contained in "everything else."
-
-Please be not disappointed.
-
-The string of Perl3 or later can treat binary data. That is, the string of
-Perl3 or later can treat GBK.
-
-Perl is designed to make the easy jobs easy, without making the hard jobs
-impossible. GBK software is Perl program designed to make the "easy jobs easy".
+10% everything else. Even if this "text" doesn't contain GBK, Perl3 or later
+can treat GBK as binary data.
 
 By "use GBK;", it automatically interpret your script as GBK. The various
 functions of perl including a regular expression can treat GBK now.
@@ -5871,7 +5870,7 @@ I learned the following things from the successful software.
 
 =item * Maximum Portability like jcode.pl
 
-=item * Handles Raw GBK, Doesn't use UTF8 flag like JPerl
+=item * Remains One Language Handling Raw GBK, Doesn't Use UTF8 flag like JPerl
 
 =item * Remains One Interpreter like Encode module
 
@@ -5881,7 +5880,7 @@ I learned the following things from the successful software.
 
 =back
 
-I am excited about this software and its future --- I hope you are too.
+I am excited about this software and Perl's future --- I hope you are too.
 
 =head1 JRE: JPerl Runtime Environment
 
@@ -6015,8 +6014,7 @@ works well.
 This software adds the function by 'Escaping' it always, and nothing of the
 past is broken. Therefore, 'Possible job' never becomes 'Impossible job'.
 This approach is effective in the field where the retreat is never permitted.
-Modern Perl/perl can not always solve the problem. Often, it means an
-incompatible upgrade part to traditional Perl should be rewound.
+It means incompatible upgrade of Perl should be rewound.
 
 =head1 Escaping Your Script (You do)
 
@@ -6233,7 +6231,7 @@ Also POSIX-style character classes.
   [:^xdigit:]   ${Egbk::not_xdigit}
   ---------------------------------------------------------------
 
-Also \b and \B are redefined as follows to backward compatibility.
+\b and \B are redefined as follows to backward compatibility.
 
   ---------------------------------------------------------------
   Before      After
@@ -6248,6 +6246,8 @@ Definitions in Egbk.pm.
   After                    Definition
   ---------------------------------------------------------------------------------------------------------------------------------------------------------
   ${Egbk::anchor}         qr{\G(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])*?}
+                           for over 32766 octets string on ActivePerl5.6 and Perl5.10 or later
+                           qr{\G(?(?=.{0,32766}\z)(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])*?|(?(?=[$sbcs]+\z).*?|(?:.*?[$sbcs](?:$tbcs_1st[^$sbcs]{2})*?)))}oxms;
   ${Egbk::dot}            qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE\x0A])}
   ${Egbk::dot_s}          qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])}
   ${Egbk::eD}             qr{(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE0-9])}
@@ -6470,9 +6470,6 @@ oriented function. See 'Character-Oriented Functions'.
   If you import ord "use GBK qw(ord);", ord of your script will be rewritten in
   GBK::ord. GBK::ord is not compatible with ord of JPerl.
 
-  Even if you do not know this function, there is no problem. This function can
-  be created with a unpack function as before.
-
 =item * Reverse List or String
 
   @reverse = GBK::reverse(@list);
@@ -6494,6 +6491,11 @@ oriented function. See 'Character-Oriented Functions'.
   $rev = join('', reverse(split(//, $jstring)));
 
   as before.
+
+  See:
+  P.558 JPerl (Japanese Perl)
+  Appendix C Supplement the Japanese version
+  ISBN 4-89052-384-7 PERL PUROGURAMINGU
 
 =item * Returns Next Character
 
@@ -6537,9 +6539,6 @@ oriented function. See 'Character-Oriented Functions'.
   If you import getc "use GBK qw(getc);", getc of your script will be rewritten in
   GBK::getc. GBK::getc is not compatible with getc of JPerl.
 
-  Even if you do not know this function, there is no problem. This function can
-  be created with CORE::getc as before.
-
 =item * Length by GBK Character
 
   $length = GBK::length($string);
@@ -6563,6 +6562,11 @@ oriented function. See 'Character-Oriented Functions'.
   $len = split(//, $jstring);
 
   as before.
+
+  See:
+  P.558 JPerl (Japanese Perl)
+  Appendix C Supplement the Japanese version
+  ISBN 4-89052-384-7 PERL PUROGURAMINGU
 
 =item * Substr by GBK Character
 
@@ -6619,9 +6623,6 @@ oriented function. See 'Character-Oriented Functions'.
       $pos++;
   }
 
-  This function is realizable with a regular expression as before. There is no
-  problem even if you do not know this function.
-
 =item * Rindex by GBK Character
 
   $rindex = GBK::rindex($string,$substring,$offset);
@@ -6638,9 +6639,6 @@ oriented function. See 'Character-Oriented Functions'.
       print "Found at $pos\n";
       $pos--;
   }
-
-  This function is realizable with a regular expression as before. There is no
-  problem even if you do not know this function.
 
 =item * Filename Globbing
 
@@ -7048,15 +7046,15 @@ GBK::substr($string, 13, 4, "JPerl");
 
 =item * Limitation of Regular Expression
 
-This software has limitation from \G in multibyte anchoring. On perl5.006,
-perl5.008, perl5.010, perl5.012, perl5.014 and perl5.016 it doesn't match in
-the place in which it should match at over 32,767 octets. Moreover, at that
-time, neither the error nor warning are displayed.
+This software has limitation from \G in multibyte anchoring. Only the following
+Perl can treat the character string which exceeds 32766 octets with a regular
+expression.
+
+perl 5.6  or later --- ActivePerl on MSWin32
+
+perl 5.10 or later --- other Perl
 
   see also,
-  
-  Bug #89792 \G can't treat over 32,767 octets
-  http://bugs.activestate.com/show_bug.cgi?id=89792
   
   [perl #116379] \G can't treat over 32767 octet
   http://www.nntp.perl.org/group/perl.perl5.porters/2013/01/msg197320.html
@@ -7064,14 +7062,11 @@ time, neither the error nor warning are displayed.
   perlre - Perl regular expressions
   http://perldoc.perl.org/perlre.html
   
-  regexp limit to 32767 is too small
-  http://markmail.org/message/vtdmaxsa6xqb7fcz
-  
-  regexp limit to 32767 is too small?
-  http://markmail.org/thread/bmmcshbtndbwr3j3
-  
   perlre length limit
   http://stackoverflow.com/questions/4592467/perlre-length-limit
+  
+  Japanese Document
+  GBK/JA.pm
 
 =item * Empty Variable in Regular Expression
 
@@ -7151,7 +7146,7 @@ time to replace all the in existence scripts.
 
 The biggest problem of new method is that the UTF8 flag can't synchronize
 to real encode of string. Thus you must debug about UTF8 flag, before
-your script. How to solve it by returning to a past method, let's drag out
+your script. How to solve it by returning to a this method, let's drag out
 page 402 of the old dusty Programming Perl, 3rd ed. again.
 
   Information processing model beginning with perl3 or this software.
@@ -7172,8 +7167,9 @@ Ideally, I'd like to achieve these five Goals:
 Old byte-oriented programs should not spontaneously break on the old
 byte-oriented data they used to work on.
 
-It has already been achieved by GBK designed for combining with
-old byte-oriented ASCII.
+This goal has been achieved by that this software is additional code
+for perl like utf8 pragma. Perl should work same as past Perl if added
+nothing.
 
 =item * Goal #2:
 
@@ -7222,8 +7218,7 @@ The reason why JPerl is very excellent is that it is at the position of
 (c). That is, it is not necessary to do a special description to the
 script to process new character-oriented string.
 
-Contrasting is Encode module and describing "use GBK;" on this software,
-in this case, a new description is necessary.
+JPerl is the only software attained to this goal.
 
 =item * Goal #3:
 
@@ -7253,6 +7248,8 @@ a filter program.
 
 And you will get support from the Perl community, when you solve the
 problem by the Perl script.
+
+GBK software remains one language and one interpreter.
 
 =item * Goal #5:
 
@@ -7285,7 +7282,7 @@ programming environment like at that time.
   If you think this is a big headache, you're right. No one likes
   this situation, but Perl does the best it can with the input and
   encodings it has to deal with. If only we could reset history and
-  not make so many mistakes nest time.
+  not make so many mistakes next time.
  
   --- Learning Perl 6th Edition
 
@@ -7431,6 +7428,13 @@ programming environment like at that time.
  Pages: 172
  T1008901080816 ZASSHI 08901-8
  http://ascii.asciimw.jp/books/books/detail/978-4-7561-5008-0.shtml
+
+ LINUX NIHONGO KANKYO
+ By YAMAGATA Hiroo, Stephen J. Turnbull, Craig Oda, Robert J. Bickel
+ June, 2000
+ Pages: 376
+ ISBN 4-87311-016-5
+ http://www.oreilly.co.jp/books/4873110165/
 
  MacPerl Power and Ease
  By Vicki Brown, Chris Nandor

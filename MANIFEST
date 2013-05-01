@@ -379,3 +379,6 @@ t/341_getc.t
 t/342_getc.t
 t/343_getc.t
 t/344_getc.t
+t/345_anchor.t
+t/346_re_longstr.t
+t/347_re_longstr.t
