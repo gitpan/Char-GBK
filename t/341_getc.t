@@ -18,7 +18,7 @@ open(my $fh,"<$__FILE__.txt") || die;
 
 my @getc = ();
 while (my $c = Char::GBK::getc($fh)) {
-    last if $c eq "\n";
+    last if $c =~ /\A[\r\n]\z/;
     push @getc, $c;
 }
 close($fh);

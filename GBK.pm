@@ -28,7 +28,7 @@ BEGIN {
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.88 $ =~ /(\d+)/oxmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.89 $ =~ /(\d+)/oxmsg;
 
 BEGIN { require Egbk; }
 
@@ -5984,26 +5984,33 @@ works well.
    perl512.bat           --- find and run perl5.12 without %PATH% settings
    perl514.bat           --- find and run perl5.14 without %PATH% settings
    perl516.bat           --- find and run perl5.16 without %PATH% settings
+   perl518.bat           --- find and run perl5.18 without %PATH% settings
    perl64.bat            --- find and run perl64   without %PATH% settings
    perl64512.bat         --- find and run perl5.12 (x64) without %PATH% settings
    perl64514.bat         --- find and run perl5.14 (x64) without %PATH% settings
    perl64516.bat         --- find and run perl5.16 (x64) without %PATH% settings
+   perl64518.bat         --- find and run perl5.18 (x64) without %PATH% settings
    aperl58.bat           --- find and run ActivePerl 5.8  without %PATH% settings
    aperl510.bat          --- find and run ActivePerl 5.10 without %PATH% settings
    aperl512.bat          --- find and run ActivePerl 5.12 without %PATH% settings
    aperl514.bat          --- find and run ActivePerl 5.14 without %PATH% settings
    aperl516.bat          --- find and run ActivePerl 5.16 without %PATH% settings
+   aperl518.bat          --- find and run ActivePerl 5.18 without %PATH% settings
    aperl64512.bat        --- find and run ActivePerl 5.12 (x64) without %PATH% settings
    aperl64514.bat        --- find and run ActivePerl 5.14 (x64) without %PATH% settings
    aperl64516.bat        --- find and run ActivePerl 5.16 (x64) without %PATH% settings
+   aperl64518.bat        --- find and run ActivePerl 5.18 (x64) without %PATH% settings
    sperl58.bat           --- find and run Strawberry Perl 5.8  without %PATH% settings
    sperl510.bat          --- find and run Strawberry Perl 5.10 without %PATH% settings
    sperl512.bat          --- find and run Strawberry Perl 5.12 without %PATH% settings
    sperl514.bat          --- find and run Strawberry Perl 5.14 without %PATH% settings
    sperl516.bat          --- find and run Strawberry Perl 5.16 without %PATH% settings
+   sperl518.bat          --- find and run Strawberry Perl 5.18 without %PATH% settings
    sperl64512.bat        --- find and run Strawberry Perl 5.12 (x64) without %PATH% settings
    sperl64514.bat        --- find and run Strawberry Perl 5.14 (x64) without %PATH% settings
    sperl64516.bat        --- find and run Strawberry Perl 5.16 (x64) without %PATH% settings
+   sperl64518.bat        --- find and run Strawberry Perl 5.18 (x64) without %PATH% settings
+   cperl.bat             --- find and run Cygwin's Perl without %PATH% settings
    strict.pm_            --- dummy strict.pm
    warnings.pm_          --- poor warnings.pm
    warnings/register.pm_ --- poor warnings/register.pm
@@ -7052,9 +7059,12 @@ expression.
 
 perl 5.6  or later --- ActivePerl on MSWin32
 
-perl 5.10 or later --- other Perl
+perl 5.10.1 or later --- other Perl
 
   see also,
+  
+  In 5.10.0, the * quantifier in patterns was sometimes treated as {0,32767}
+  http://perldoc.perl.org/perl5101delta.html
   
   [perl #116379] \G can't treat over 32767 octet
   http://www.nntp.perl.org/group/perl.perl5.porters/2013/01/msg197320.html

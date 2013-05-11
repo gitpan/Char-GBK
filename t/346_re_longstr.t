@@ -9,10 +9,13 @@ my $__FILE__ = __FILE__;
 my $anchor1 = q{\G(?:[\x81-\x9F\xE0-\xFC][\x00-\xFF]|[\x00-\xFF])*?};
 my $anchor2 = q{\G(?(?!.{32766})(?:[\x81-\x9F\xE0-\xFC][\x00-\xFF]|[\x00-\xFF])*?|(?(?=[\x00-\x7F]+\z).*?|.*?[^\x81-\x9F\xE0-\xFC](?:[\x81-\x9F\xE0-\xFC][\x00-\xFF])*?))};
 
-if (($] >= 5.010) or
-    (($] >= 5.008) and ($^O eq 'MSWin32') and (`$^X -v` =~ /ActiveState/)) or
+if (($] >= 5.010001) or
+    (($] >= 5.008) and ($^O eq 'MSWin32') and (defined($ActivePerl::VERSION) and ($ActivePerl::VERSION > 800))) or
     (($] =~ /\A 5\.006/oxms) and ($^O eq 'MSWin32'))
 ) {
+    # avoid: Complex regular subexpression recursion limit (32766) exceeded at here.
+    local $^W = 0;
+
     if (((('A' x 32768).'B') !~ /${anchor1}B/b) and
         ((('A' x 32768).'B') =~ /${anchor2}B/b)
     ) {
