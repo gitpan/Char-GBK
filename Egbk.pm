@@ -29,31 +29,7 @@ BEGIN {
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.90 $ =~ /(\d+)/xmsg;
-
-BEGIN {
-    my $PERL5LIB = __FILE__;
-
-    # DOS-like system
-    if ($^O =~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
-        $PERL5LIB =~ s{[^\x81-\xFE/]*$}{GBK};
-    }
-
-    # UNIX-like system
-    else {
-        $PERL5LIB =~ s{[^\x81-\xFE/]*$}{GBK};
-    }
-
-    my @inc = ();
-    my %inc = ();
-    for my $path ($PERL5LIB, @INC) {
-        if (not exists $inc{$path}) {
-            push @inc, $path;
-            $inc{$path} = 1;
-        }
-    }
-    @INC = @inc;
-}
+$VERSION = sprintf '%d.%02d', q$Revision: 0.91 $ =~ /(\d+)/xmsg;
 
 BEGIN {
 
@@ -154,7 +130,8 @@ sub confess;
 my $your_char = q{[\x81-\xFE][\x00-\xFF]|[\x00-\xFF]};
 
 # regexp of character
-my $q_char = qr/$your_char/oxms;
+BEGIN { eval q{ use vars qw($q_char) } }
+$q_char = qr/$your_char/oxms;
 
 #
 # GBK character range per length
@@ -402,6 +379,9 @@ BEGIN { eval q{ use vars qw(
     $matched
 ) } }
 ${Egbk::anchor}      = qr{\G(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])*?}oxms;
+BEGIN { eval q{ use vars qw(
+    $q_char_SADAHIRO_Tomoyuki_2002_01_17
+) } }
 
 # Quantifiers
 #   {n,m}  ---  Match at least n but not more than m times
@@ -433,17 +413,7 @@ if (($] >= 5.010001) or
 
     # GB18030 encoding
     if (__PACKAGE__ =~ / \b Egb18030 \z/oxms) {
-        ${Egbk::anchor_SADAHIRO_Tomoyuki_2002_01_17} =
-        qr{\G(?(?=.{0,32766}\z)(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])*?|(?(?=[$sbcs]+\z).*?|(?:.*?[^\x30-\x39\x81-\xFE](?:[\x30-\x39]|[\x81-\xFE][\x30-\x39][\x81-\xFE][\x30-\x39]|[\x81-\xFE]{2})*?)))}oxms;
-#       qr{
-#          \G # (1), (2)
-#            (? # (3)
-#              (?=.{0,32766}\z) # (4)
-#                              (?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])*?| # (5)
-#                                                                                          (?(?=[$sbcs]+\z) # (6)
-#                                                                                                          .*?| #(7)
-#                                                                                                              (?:.*?[^\x30-\x39\x81-\xFE](?:[\x30-\x39]|[\x81-\xFE][\x30-\x39][\x81-\xFE][\x30-\x39]|[\x81-\xFE]{2})*?) # (8)
-#                                                                                                                                                                                                                       ))}oxms;
+        ${Egbk::q_char_SADAHIRO_Tomoyuki_2002_01_17} = qr{.*?[^\x30-\x39\x81-\xFE](?:[\x30-\x39]|[\x81-\xFE][\x30-\x39][\x81-\xFE][\x30-\x39]|[\x81-\xFE]{2})*?}oxms;
     }
 
     # other encoding
@@ -460,19 +430,20 @@ if (($] >= 5.010001) or
             }
             $tbcs_1st = "[$tbcs_1st]?";
         }
-
-        ${Egbk::anchor_SADAHIRO_Tomoyuki_2002_01_17} =
-        qr{\G(?(?=.{0,32766}\z)(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])*?|(?(?=[$sbcs]+\z).*?|(?:.*?[$sbcs](?:$tbcs_1st[^$sbcs]{2})*?)))}oxms;
-#       qr{
-#          \G # (1), (2)
-#            (? # (3)
-#              (?=.{0,32766}\z) # (4)
-#                              (?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])*?| # (5)
-#                                                                                          (?(?=[$sbcs]+\z) # (6)
-#                                                                                                          .*?| #(7)
-#                                                                                                              (?:.*?[$sbcs](?:$tbcs_1st[^$sbcs]{2})*?) # (8)
-#                                                                                                                                                      ))}oxms;
+        ${Egbk::q_char_SADAHIRO_Tomoyuki_2002_01_17} = qr{.*?[$sbcs](?:$tbcs_1st[^$sbcs]{2})*?}oxms;
     }
+
+    ${Egbk::anchor_SADAHIRO_Tomoyuki_2002_01_17} =
+    qr{\G(?(?=.{0,32766}\z)(?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])*?|(?(?=[$sbcs]+\z).*?|(?:${Egbk::q_char_SADAHIRO_Tomoyuki_2002_01_17})))}oxms;
+#   qr{
+#      \G # (1), (2)
+#        (? # (3)
+#          (?=.{0,32766}\z) # (4)
+#                          (?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])*?| # (5)
+#                                                                                      (?(?=[$sbcs]+\z) # (6)
+#                                                                                                      .*?| #(7)
+#                                                                                                          (?:${Egbk::q_char_SADAHIRO_Tomoyuki_2002_01_17}) # (8)
+#                                                                                                                                                           ))}oxms;
 
     # avoid: Complex regular subexpression recursion limit (32766) exceeded at here.
     local $^W = 0;
@@ -481,6 +452,9 @@ if (($] >= 5.010001) or
         ((('A' x 32768).'B') =~ / ${Egbk::anchor_SADAHIRO_Tomoyuki_2002_01_17} B /oxms)
     ) {
         ${Egbk::anchor} = ${Egbk::anchor_SADAHIRO_Tomoyuki_2002_01_17};
+    }
+    else {
+        undef ${Egbk::q_char_SADAHIRO_Tomoyuki_2002_01_17};
     }
 }
 
@@ -611,6 +585,11 @@ sub Egbk::split(;$$$) {
     my $string  = $_[1];
     my $limit   = $_[2];
 
+    # if $pattern is also omitted or is the literal space, " "
+    if (not defined $pattern) {
+        $pattern = ' ';
+    }
+
     # if $string is omitted, the function splits the $_ string
     if (not defined $string) {
         if (defined $_) {
@@ -639,24 +618,47 @@ sub Egbk::split(;$$$) {
         }
     }
 
-    # if $limit is negative, it is treated as if an arbitrarily large $limit has been specified
-    elsif ((not defined $limit) or ($limit <= 0)) {
-        if (0) {
+    # split's first argument is more consistently interpreted
+    #
+    # After some changes earlier in v5.17, split's behavior has been simplified:
+    # if the PATTERN argument evaluates to a string containing one space, it is
+    # treated the way that a literal string containing one space once was.
+    # http://search.cpan.org/dist/perl-5.18.0/pod/perldelta.pod#split's_first_argument_is_more_consistently_interpreted
+
+    # if $pattern is also omitted or is the literal space, " ", the function splits
+    # on whitespace, /\s+/, after skipping any leading whitespace
+    # (and so on)
+
+    elsif ($pattern eq ' ') {
+        if (not defined $limit) {
+            return CORE::split(' ', $string);
         }
+        else {
+            return CORE::split(' ', $string, $limit);
+        }
+    }
 
-        # split's first argument is more consistently interpreted
-        #
-        # After some changes earlier in v5.17, split's behavior has been simplified:
-        # if the PATTERN argument evaluates to a string containing one space, it is
-        # treated the way that a literal string containing one space once was.
-        # http://search.cpan.org/dist/perl-5.18.0/pod/perldelta.pod#split's_first_argument_is_more_consistently_interpreted
+    local $q_char = $q_char;
+    if (CORE::length($string) > 32766) {
+        if ($string =~ /\A [\x00-\x7F]+ \z/oxms) {
+            $q_char = qr{.}s;
+        }
+        elsif (defined ${Egbk::q_char_SADAHIRO_Tomoyuki_2002_01_17}) {
+            $q_char = ${Egbk::q_char_SADAHIRO_Tomoyuki_2002_01_17};
+        }
+    }
 
-        # if $pattern is also omitted or is the literal space, " ", the function splits
-        # on whitespace, /\s+/, after skipping any leading whitespace
+    # if $limit is negative, it is treated as if an arbitrarily large $limit has been specified
+    if ((not defined $limit) or ($limit <= 0)) {
+
+        # a pattern capable of matching either the null string or something longer than the
+        # null string will split the value of $string into separate characters wherever it
+        # matches the null string between characters
         # (and so on)
 
-        elsif ((not defined $pattern) or ($pattern eq ' ')) {
-            $string =~ s/ \A \s+ //oxms;
+        if ('' =~ / \A $pattern \z /xms) {
+            my $last_subexpression_offsets = _last_subexpression_offsets($pattern);
+            my $limit = scalar(() = $string =~ /($pattern)/oxmsg);
 
             # P.1024 Appendix W.10 Multibyte Processing
             # of ISBN 1-56592-224-7 CJKV Information Processing
@@ -665,29 +667,13 @@ sub Egbk::split(;$$$) {
             # the //m modifier is assumed when you split on the pattern /^/
             # (and so on)
 
-            while ($string =~ s/\A((?:$q_char)*?)\s+//m) {
+            #                                                     V
+            while ((--$limit > 0) and ($string =~ s/\A((?:$q_char)+?)$pattern//m)) {
 
                 # if the $pattern contains parentheses, then the substring matched by each pair of parentheses
                 # is included in the resulting list, interspersed with the fields that are ordinarily returned
                 # (and so on)
 
-                local $@;
-                for (my $digit=1; $digit <= 1; $digit++) {
-                    push @split, eval('$' . $digit);
-                }
-            }
-        }
-
-        # a pattern capable of matching either the null string or something longer than the
-        # null string will split the value of $string into separate characters wherever it
-        # matches the null string between characters
-        # (and so on)
-
-        elsif ('' =~ / \A $pattern \z /xms) {
-            my $last_subexpression_offsets = _last_subexpression_offsets($pattern);
-
-            #                                 V
-            while ($string =~ s/\A((?:$q_char)+?)$pattern//m) {
                 local $@;
                 for (my $digit=1; $digit <= ($last_subexpression_offsets + 1); $digit++) {
                     push @split, eval('$' . $digit);
@@ -708,21 +694,8 @@ sub Egbk::split(;$$$) {
         }
     }
 
-    else {
-        if (0) {
-        }
-        elsif ((not defined $pattern) or ($pattern eq ' ')) {
-            $string =~ s/ \A \s+ //oxms;
-            while ((--$limit > 0) and (CORE::length($string) > 0)) {
-                if ($string =~ s/\A((?:$q_char)*?)\s+//m) {
-                    local $@;
-                    for (my $digit=1; $digit <= 1; $digit++) {
-                        push @split, eval('$' . $digit);
-                    }
-                }
-            }
-        }
-        elsif ('' =~ / \A $pattern \z /xms) {
+    elsif ($limit > 0) {
+        if ('' =~ / \A $pattern \z /xms) {
             my $last_subexpression_offsets = _last_subexpression_offsets($pattern);
             while ((--$limit > 0) and (CORE::length($string) > 0)) {
 
@@ -750,10 +723,12 @@ sub Egbk::split(;$$$) {
         }
     }
 
-    push @split, $string;
+    if (CORE::length($string) > 0) {
+        push @split, $string;
+    }
 
-    # if $limit is omitted or zero, trailing null fields are stripped from the result
-    if ((not defined $limit) or ($limit == 0)) {
+    # if $_[2] (NOT "$limit") is omitted or zero, trailing null fields are stripped from the result
+    if ((not defined $_[2]) or ($_[2] == 0)) {
         while ((scalar(@split) >= 1) and ($split[-1] eq '')) {
             pop @split;
         }
@@ -5962,6 +5937,8 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   The inverse of Egbk::split is join, except that join can only join with the
   same separator between all fields. To break apart a string with fixed-position
   fields, use unpack.
+
+  Processing long $string (over 32766 octets) requires Perl 5.010001 or later.
 
 =item Transliteration
 

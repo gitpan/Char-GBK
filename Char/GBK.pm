@@ -29,7 +29,7 @@ BEGIN {
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.90 $ =~ /(\d+)/oxmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.91 $ =~ /(\d+)/oxmsg;
 
 BEGIN { CORE::require Char::Egbk; }
 
@@ -500,7 +500,7 @@ sub Char::GBK::escape_script {
         # in Chapter 5: Pattern Matching
         # of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
 
-        $e_script .= sprintf("use Char::Egbk %s;\n", $Char::GBK::VERSION); # require run-time routines version
+        $e_script .= sprintf("use Char::Egbk %s.0;\n", $Char::GBK::VERSION); # require run-time routines version
 
         # use Char::GBK version qw(ord reverse getc);
         $function_ord     = 'ord';
@@ -6819,12 +6819,6 @@ Char/GBK.pm removes 'bytes::' at head of function name.
   bytes::substr    substr    Byte
   ---------------------------------------
 
-=head1 Escaping Built-in Standard Module (Char/Egbk.pm provides)
-
-Char/Egbk.pm does "BEGIN { unshift @INC, '/Perl/site/lib/Char::GBK' }" at head.
-Store the standard module modified for Char::GBK software in this directory to
-override built-in standard modules.
-
 =head1 Escaping Standard Module Content (You do)
 
 You need copy built-in standard module to /Perl/site/lib/Char::GBK and change
@@ -7562,3 +7556,4 @@ I am thankful to all persons.
 
 =cut
 
+# Did you fun enough? ^o^)

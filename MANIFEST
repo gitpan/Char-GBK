@@ -2,6 +2,8 @@ Char/GBK.pm
 Char/Egbk.pm
 GBK.pm
 Egbk.pm
+GBK.pm
+Egbk.pm
 strict.pm_
 warnings.pm_
 warnings/register.pm_
@@ -48,6 +50,7 @@ pMakefile.PL
 MANIFEST
 test.pl
 README
+README2ND
 META.yml
 t/001_gbkhtm.t
 t/002_gbkhtm.t
@@ -398,3 +401,9 @@ t/352_substr_perldoc.t
 t/353_substr_perldoc.t
 t/354_substr_perldoc.t
 t/355_substr_perldoc.t
+t/356_split_longstr.t
+t/357_split_longstr.t
+t/358_split_longstr.t
+t/359_split_longstr.t
+t/360_split_longstr.t
+t/361_split_perl518.t
