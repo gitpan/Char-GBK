@@ -263,7 +263,7 @@ See also code table:
 Final octet of string like first octet of double octet code
 
 Even if malformed, it is not ignored and not deleted automatically.
-For example, Egbk::chop function returns this octet.
+For example, Egbk::chop subroutine returns this octet.
 
    0 1 2 3 4 5 6 7 8 9 A B C D E F 
   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+

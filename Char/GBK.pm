@@ -11,6 +11,14 @@ package Char::GBK;
 use 5.00503;    # Galapagos Consensus 1998 for primetools
 # use 5.008001; # Lancaster Consensus 2013 for toolchains
 
+# 12.3. Delaying use Until Runtime
+# in Chapter 12. Packages, Libraries, and Modules
+# of ISBN 0-596-00313-7 Perl Cookbook, 2nd Edition.
+# (and so on)
+
+BEGIN { eval q{ use vars qw($VERSION) } }
+$VERSION = sprintf '%d.%02d', q$Revision: 0.92 $ =~ /(\d+)/oxmsg;
+
 BEGIN {
     if ($^X =~ / jperl /oxmsi) {
         die __FILE__, ": needs perl(not jperl) 5.00503 or later. (\$^X==$^X)";
@@ -22,14 +30,6 @@ BEGIN {
         die __FILE__, ": is not US-ASCII script (must be US-ASCII script).";
     }
 }
-
-# 12.3. Delaying use Until Runtime
-# in Chapter 12. Packages, Libraries, and Modules
-# of ISBN 0-596-00313-7 Perl Cookbook, 2nd Edition.
-# (and so on)
-
-BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.91 $ =~ /(\d+)/oxmsg;
 
 BEGIN { CORE::require Char::Egbk; }
 
@@ -829,7 +829,7 @@ sub escape {
 # doit if, doit unless, doit while, doit until, doit for, doit when
     elsif (/\G \b ( if | unless | while | until | for | when ) \b /oxgc) { $slash = 'm//'; return $1; }
 
-# functions of package Char::Egbk
+# subroutines of package Char::Egbk
     elsif (/\G \b (CORE:: | ->[ ]* (?: atan2 | [a-z]{2,})) \b  /oxgc) { $slash = 'm//'; return $1;                    }
     elsif (/\G \b bytes::substr \b (?! \s* => )                /oxgc) { $slash = 'm//'; return 'substr';              }
     elsif (/\G \b chop \b          (?! \s* => )                /oxgc) { $slash = 'm//'; return 'Char::Egbk::chop';         }
@@ -2193,7 +2193,7 @@ E_STRING_LOOP:
             $slash = 'div';
         }
 
-# functions of package Char::Egbk
+# subroutines of package Char::Egbk
         elsif ($string =~ /\G \b (CORE:: | ->[ ]* (?: atan2 | [a-z]{2,})) \b  /oxgc) { $e_string .= $1;               $slash = 'm//'; }
         elsif ($string =~ /\G \b bytes::substr \b                             /oxgc) { $e_string .= 'substr';         $slash = 'm//'; }
         elsif ($string =~ /\G \b chop \b                                      /oxgc) { $e_string .= 'Char::Egbk::chop';    $slash = 'm//'; }
@@ -5715,7 +5715,7 @@ There are two steps there:
   GBK_script.pl  --- script written in GBK
   Escaped_script.pl.e --- escaped script
 
-  functions:
+  subroutines:
     Char::GBK::ord(...);
     Char::GBK::reverse(...);
     Char::GBK::getc(...);
@@ -5723,6 +5723,7 @@ There are two steps there:
     Char::GBK::substr(...);
     Char::GBK::index(...);
     Char::GBK::rindex(...);
+  functions:
     <*>
     glob(...);
     CORE::chop(...);
@@ -6254,7 +6255,7 @@ http://perl5.git.perl.org/perl.git/commit/2a53d3314d380af5ab5283758219417c6dfa36
 =head1 Escaping Built-in Functions (Char/GBK.pm and Char/Egbk.pm provide)
 
 Insert 'Char::Egbk::' at head of function name. Char/Egbk.pm provides your script Char::Egbk::*
-functions.
+subroutines.
 
   -------------------------------------------
   Before      After            Works as
@@ -6369,7 +6370,7 @@ test operators, in a way that -w -x $file is equivalent to -x $file && -w _ .
 =head1 Escaping Function Name (You do)
 
 You need write 'Char::GBK::' at head of function name when you want character-
-oriented function. See 'Character-Oriented Functions'.
+oriented subroutine. See 'Character-Oriented Subroutines'.
 
   --------------------------------------------------------
   Function   Character-Oriented   Description
@@ -6405,7 +6406,7 @@ oriented function. See 'Character-Oriented Functions'.
   (nothing)      Byte        Character    (most useless)
   -------------------------------------------------------------------------
 
-=head1 Character-Oriented Functions
+=head1 Character-Oriented Subsroutines
 
 =over 2
 
@@ -6413,7 +6414,7 @@ oriented function. See 'Character-Oriented Functions'.
 
   $ord = Char::GBK::ord($string);
 
-  This function returns the numeric value (ASCII or GBK character) of the
+  This subroutine returns the numeric value (ASCII or GBK character) of the
   first character of $string, not Unicode. If $string is omitted, it uses $_.
   The return value is always unsigned.
 
@@ -6425,18 +6426,18 @@ oriented function. See 'Character-Oriented Functions'.
   @reverse = Char::GBK::reverse(@list);
   $reverse = Char::GBK::reverse(@list);
 
-  In list context, this function returns a list value consisting of the elements of
-  @list in the opposite order.
+  In list context, this subroutine returns a list value consisting of the elements
+  of @list in the opposite order.
 
-  In scalar context, the function concatenates all the elements of @list and then
-  returns the reverse of that resulting string, character by character.
+  In scalar context, the subroutine concatenates all the elements of @list and
+  then returns the reverse of that resulting string, character by character.
 
   If you import reverse "use Char::GBK qw(reverse);", reverse of your script will be
   rewritten in Char::GBK::reverse. Char::GBK::reverse is not compatible with reverse of
   JPerl.
 
-  Even if you do not know this function, there is no problem. This function can
-  be created with
+  Even if you do not know this subroutine, there is no problem. This subroutine
+  can be created with
 
   $rev = join('', reverse(split(//, $jstring)));
 
@@ -6453,17 +6454,18 @@ oriented function. See 'Character-Oriented Functions'.
   $getc = Char::GBK::getc($filehandle);
   $getc = Char::GBK::getc;
 
-  This function returns the next character from the input file attached to FILEHANDLE.
-  It returns undef at end-of-file, or if an I/O error was encountered. If FILEHANDLE
-  is omitted, the function reads from STDIN.
+  This subroutine returns the next character from the input file attached to
+  FILEHANDLE. It returns undef at end-of-file, or if an I/O error was encountered.
+  If FILEHANDLE is omitted, the subroutine reads from STDIN.
 
-  This function is somewhat slow, but it's occasionally useful for single-character
-  input from the keyboard -- provided you manage to get your keyboard input
-  unbuffered. This function requests unbuffered input from the standard I/O library.
-  Unfortunately, the standard I/O library is not so standard as to provide a portable
-  way to tell the underlying operating system to supply unbuffered keyboard input to
-  the standard I/O system. To do that, you have to be slightly more clever, and in
-  an operating-system-dependent fashion. Under Unix you might say this:
+  This subroutine is somewhat slow, but it's occasionally useful for
+  single-character input from the keyboard -- provided you manage to get your
+  keyboard input unbuffered. This subroutine requests unbuffered input from the
+  standard I/O library. Unfortunately, the standard I/O library is not so standard
+  as to provide a portable way to tell the underlying operating system to supply
+  unbuffered keyboard input to the standard I/O system. To do that, you have to
+  be slightly more clever, and in an operating-system-dependent fashion. Under
+  Unix you might say this:
 
   if ($BSD_STYLE) {
       system "stty cbreak </dev/tty >/dev/tty 2>&1";
@@ -6482,21 +6484,21 @@ oriented function. See 'Character-Oriented Functions'.
   }
   print "\n";
 
-  This code puts the next character typed on the terminal in the string $key. If your
-  stty program has options like cbreak, you'll need to use the code where $BSD_STYLE
-  is true. Otherwise, you'll need to use the code where it is false.
+  This code puts the next character typed on the terminal in the string $key. If
+  your stty program has options like cbreak, you'll need to use the code where
+  $BSD_STYLE is true. Otherwise, you'll need to use the code where it is false.
 
-  If you import getc "use Char::GBK qw(getc);", getc of your script will be rewritten in
-  Char::GBK::getc. Char::GBK::getc is not compatible with getc of JPerl.
+  If you import getc "use Char::GBK qw(getc);", getc of your script will be rewritten
+  in Char::GBK::getc. Char::GBK::getc is not compatible with getc of JPerl.
 
 =item * Length by GBK Character
 
   $length = Char::GBK::length($string);
   $length = Char::GBK::length();
 
-  This function returns the length in characters (programmer-visible characters) of
-  the scalar value $string. If $string is omitted, it returns the Char::GBK::length of
-  $_.
+  This subroutine returns the length in characters (programmer-visible characters)
+  of the scalar value $string. If $string is omitted, it returns the Char::GBK::length
+  of $_.
 
   Do not try to use Char::GBK::length to find the size of an array or hash. Use scalar
   @array for the size of an array, and scalar keys %hash for the number of key/value
@@ -6506,8 +6508,8 @@ oriented function. See 'Character-Oriented Functions'.
 
   $bytes = length($string);
 
-  Even if you do not know this function, there is no problem. This function can
-  be created with
+  Even if you do not know this subroutine, there is no problem. This subroutine
+  can be created with
 
   $len = split(//, $jstring);
 
@@ -6524,7 +6526,7 @@ oriented function. See 'Character-Oriented Functions'.
   $substr = Char::GBK::substr($string,$offset,$length);
   $substr = Char::GBK::substr($string,$offset);
 
-  This function extracts a substring out of the string given by $string and returns
+  This subroutine extracts a substring out of the string given by $string and returns
   it. The substring is extracted starting at $offset characters from the front of
   the string. First character is at offset zero. If $offset is negative, starts that
   far back from the end of the string.
@@ -6540,7 +6542,7 @@ oriented function. See 'Character-Oriented Functions'.
   my $tail   = Char::GBK::substr $s, -4;        # tree
   my $z      = Char::GBK::substr $s, -4, 2;     # tr
 
-  If Perl version 5.14 or later, you can use the Char::GBK::substr() function as an
+  If Perl version 5.14 or later, you can use the Char::GBK::substr() subroutine as an
   lvalue. In its case $string must itself be an lvalue. If you assign something
   shorter than $length, the string will shrink, and if you assign something longer
   than $length, the string will grow to accommodate it. To keep the string the
@@ -6597,10 +6599,10 @@ oriented function. See 'Character-Oriented Functions'.
   $index = Char::GBK::index($string,$substring,$offset);
   $index = Char::GBK::index($string,$substring);
 
-  This function searches for one string within another. It returns the character
+  This subroutine searches for one string within another. It returns the character
   position of the first occurrence of $substring in $string. The $offset, if
   specified, says how many characters from the start to skip before beginning to
-  look. Positions are based at 0. If the substring is not found, the function
+  look. Positions are based at 0. If the substring is not found, the subroutine
   returns one less than the base, ordinarily -1. To work your way through a string,
   you might say:
 
@@ -6615,9 +6617,9 @@ oriented function. See 'Character-Oriented Functions'.
   $rindex = Char::GBK::rindex($string,$substring,$offset);
   $rindex = Char::GBK::rindex($string,$substring);
 
-  This function works just like Char::GBK::index except that it returns the character
+  This subroutine works just like Char::GBK::index except that it returns the character
   position of the last occurrence of $substring in $string (a reverse Char::GBK::index).
-  The function returns -1 if $substring is not found. $offset, if specified, is
+  The subroutine returns -1 if $substring is not found. $offset, if specified, is
   the rightmost character position that may be returned. To work your way through
   a string backward, say:
 
@@ -6639,8 +6641,8 @@ oriented function. See 'Character-Oriented Functions'.
   Performs filename expansion (globbing) on $expr, returning the next successive
   name on each call. If $expr is omitted, $_ is globbed instead.
 
-  This operator is implemented via the Char::Egbk::glob() function. See Char::Egbk::glob of
-  Char/Egbk.pm for details.
+  This operator is implemented via the Char::Egbk::glob() subroutine. See Char::Egbk::glob
+  of Char/Egbk.pm for details.
 
 =back
 
@@ -6804,9 +6806,9 @@ oriented function. See 'Character-Oriented Functions'.
 
 =back
 
-=head1 Un-Escaping bytes::* Functions (Char/GBK.pm provides)
+=head1 Un-Escaping bytes::* Subroutines (Char/GBK.pm provides)
 
-Char/GBK.pm removes 'bytes::' at head of function name.
+Char/GBK.pm removes 'bytes::' at head of subroutine name.
 
   ---------------------------------------
   Before           After     Works as
@@ -6908,27 +6910,27 @@ Back to and see 'Escaping Your Script'. Enjoy hacking!!
 
 =item * Dummy bytes::chr
 
-  This function is same as chr.
+  This subroutine is same as chr.
 
 =item * Dummy bytes::index
 
-  This function is same as index.
+  This subroutine is same as index.
 
 =item * Dummy bytes::length
 
-  This function is same as length.
+  This subroutine is same as length.
 
 =item * Dummy bytes::ord
 
-  This function is same as ord.
+  This subroutine is same as ord.
 
 =item * Dummy bytes::rindex
 
-  This function is same as rindex.
+  This subroutine is same as rindex.
 
 =item * Dummy bytes::substr
 
-  This function is same as substr.
+  This subroutine is same as substr.
 
 =back
 
@@ -7001,9 +7003,9 @@ of the current directory is a short path name (8dot3name).
 
 =item * Char::GBK::substr as Lvalue
 
-Char::GBK::substr differs from CORE::substr, and cannot be used as a lvalue.
-To change part of a string, you can use the optional fourth argument which is the
-replacement string.
+If Perl version is older than 5.14, Char::GBK::substr differs from CORE::substr, and
+cannot be used as a lvalue. To change part of a string, you need use the optional
+fourth argument which is the replacement string.
 
 Char::GBK::substr($string, 13, 4, "JPerl");
 
@@ -7165,7 +7167,7 @@ nothing.
 Old byte-oriented programs should magically start working on the new
 character-oriented data when appropriate.
 
-Still now, 1 octet is counted with 1 by embedded functions length,
+Still now, 1 octet is counted with 1 by built-in functions length,
 substr, index, rindex and pos that handle length and position of string.
 In this part, there is no change. The length of 1 character of 2 octet
 code is 2.
