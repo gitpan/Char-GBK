@@ -13,7 +13,7 @@ if ($^O eq 'MacOS') {
 
 my $null = '';
 if ($^O =~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
-    if ($ENV{'COMSPEC'} =~ / \\COMMAND\.COM \z/oxmsi) {
+    if (($ENV{'PERL5SHELL'}||$ENV{'COMSPEC'}) =~ / \\COMMAND\.COM \z/oxmsi) {
         $null = '';
     }
     else {

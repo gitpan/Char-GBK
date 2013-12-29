@@ -30,7 +30,7 @@ if ($@) {
     print "ok - 1 # PASS dbmopen $^X $__FILE__\n";
 }
 
-if ($ENV{'COMSPEC'} =~ / \\COMMAND\.COM \z/oxmsi) {
+if (($ENV{'PERL5SHELL'}||$ENV{'COMSPEC'}) =~ / \\COMMAND\.COM \z/oxmsi) {
     system('del F*.* >NUL');
 }
 else {

@@ -17,7 +17,7 @@ use 5.00503;    # Galapagos Consensus 1998 for primetools
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.92 $ =~ /(\d+)/xmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.93 $ =~ /(\d+)/xmsg;
 
 BEGIN {
     if ($^X =~ / jperl /oxmsi) {
@@ -53,7 +53,7 @@ BEGIN {
     }
 }
 
-# poor Symbol.pm - substitute of real Symbol.pm
+# instead of Symbol.pm
 BEGIN {
     my $genpkg = "Symbol::";
     my $genseq = 0;
@@ -4286,7 +4286,7 @@ sub _DOS_like_glob {
     # UNIX-like system
     else {
         $expr =~ s{ \A ~ ( (?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE/])* ) }
-                  { $1 ? (getpwnam($1))[7] : my_home() }oxmse;
+                  { $1 ? (eval(q{(getpwnam($1))[7]})||my_home()) : my_home() }oxmse;
     }
 
     # assume global context if not provided one
@@ -4557,7 +4557,7 @@ sub my_home {
 
     # Light desperation on any (Unixish) platform
     else {
-        $home = (getpwuid($<))[7];
+        $home = eval q{ (getpwuid($<))[7] };
     }
 
     # On Unix in general, a non-existant home means "no home"
@@ -4739,21 +4739,33 @@ sub Egbk::unlink(@) {
             if ($file =~ / \A (?:$q_char)*? [ ] /oxms) {
                 $file = qq{"$file"};
             }
-
-            # internal command 'del' of command.com or cmd.exe
-            if ($ENV{'COMSPEC'} =~ / \\COMMAND\.COM \z/oxmsi) {
-                CORE::system 'del', $file;
-            }
-            else {
-                CORE::system 'del', $file, '2>NUL';
-            }
-
             my $fh = gensym();
             if (_open_r($fh, $_)) {
                 close $fh;
-            }
-            else {
-                $unlink++;
+
+                # cmd.exe on Windows NT, Windows 2000, Windows XP, Windows 2003 or later
+                if ($ENV{'OS'} eq 'Windows_NT') {
+                    CORE::system 'DEL', '/F', $file, '2>NUL';
+                }
+
+                # Win95Cmd.exe on any Windows (when SET PERL5SHELL=Win95Cmd.exe /c, `var` returns "Windows 2000")
+                elsif (qx{ver} =~ /\b(?:Windows 2000)\b/oms) {
+                    CORE::system 'DEL', '/F', $file, '2>NUL';
+                }
+
+                # COMMAND.COM on Windows 95, Windows 98, Windows 98 Second Edition, Windows Millennium Edition
+                # command.com can not "2>NUL"
+                else {
+                    CORE::system 'ATTRIB', '-R', $file; # clears Read-only file attribute
+                    CORE::system 'DEL',          $file;
+                }
+
+                if (_open_r($fh, $_)) {
+                    close $fh;
+                }
+                else {
+                    $unlink++;
+                }
             }
         }
     }
@@ -4948,25 +4960,18 @@ sub Egbk::chdir(;$) {
             pop @subdir;
         }
 
-        # Windows 95, Windows 98, Windows 98 Second Edition, Windows Millennium Edition
-        if ($ENV{'COMSPEC'} =~ / \\COMMAND\.COM \z/oxmsi) {
-            chomp(my @dirx = grep /<DIR>/oxms, qx{dir /ad "$dir*"});
-            for my $dirx (sort { CORE::length($a) <=> CORE::length($b) } @dirx) {
-                if (Egbk::fc(CORE::substr $dirx,-CORE::length($subdir[-1]),CORE::length($subdir[-1])) eq Egbk::fc($subdir[-1])) {
+        # P.504 PERL5SHELL (Microsoft ports only)
+        # in Chapter 19: The Command-Line Interface
+        # of ISBN 0-596-00027-8 Programming Perl Third Edition.
 
-                    # short file name (8dot3name) here-----v
-                    my $shortleafdir = CORE::substr $dirx, 0, 8+1+3;
-                    CORE::substr($shortleafdir,8,1) = '.';
-                    $shortleafdir =~ s/ \. [ ]+ \z//oxms;
-                    $shortdir = join '', @subdir[0..$#subdir-1], $shortleafdir;
-                    last;
-                }
-            }
-        }
+        # P.597 PERL5SHELL (Microsoft ports only)
+        # in Chapter 17: The Command-Line Interface
+        # of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
 
-        # Windows NT, Windows 2000
-        elsif (qx{ver 2>NUL} =~ /\b(?:Windows NT|Windows 2000)\b/oms) {
-            chomp(my @dirx = grep /<DIR>/oxms, qx{dir /x "$dir*" 2>NUL});
+        # Win95Cmd.exe on any Windows (when SET PERL5SHELL=Win95Cmd.exe /c, `var` returns "Windows 2000")
+        # cmd.exe on Windows NT, Windows 2000
+        if (qx{ver} =~ /\b(?:Windows NT|Windows 2000)\b/oms) {
+            chomp(my @dirx = grep /<DIR>/oxms, qx{dir /ad /x "$dir*" 2>NUL});
             for my $dirx (sort { CORE::length($a) <=> CORE::length($b) } @dirx) {
                 if (Egbk::fc(CORE::substr $dirx,-CORE::length($subdir[-1]),CORE::length($subdir[-1])) eq Egbk::fc($subdir[-1])) {
 
@@ -4984,15 +4989,31 @@ sub Egbk::chdir(;$) {
             chomp($shortdir = qx{for %I in ("$dir") do \@echo %~sI 2>NUL});
         }
 
-        # Other Windows
-        else {
-            chomp(my @dirx = grep /<DIR>/oxms, qx{dir /x "$dir*" 2>NUL});
+        # cmd.exe on Windows XP, Windows 2003 or later
+        elsif ($ENV{'OS'} eq 'Windows_NT') {
+            chomp(my @dirx = grep /<DIR>/oxms, qx{dir /ad /x "$dir*" 2>NUL});
             for my $dirx (sort { CORE::length($a) <=> CORE::length($b) } @dirx) {
                 if (Egbk::fc(CORE::substr $dirx,-CORE::length($subdir[-1]),CORE::length($subdir[-1])) eq Egbk::fc($subdir[-1])) {
 
                     # short file name (8dot3name) here-----vv
                     my $shortleafdir = CORE::substr $dirx, 36, 8+1+3;
                     $shortleafdir =~ s/ [ ]+ \z//oxms;
+                    $shortdir = join '', @subdir[0..$#subdir-1], $shortleafdir;
+                    last;
+                }
+            }
+        }
+
+        # COMMAND.COM on Windows 95, Windows 98, Windows 98 Second Edition, Windows Millennium Edition
+        else {
+            chomp(my @dirx = grep /<DIR>/oxms, qx{dir /ad "$dir*"});
+            for my $dirx (sort { CORE::length($a) <=> CORE::length($b) } @dirx) {
+                if (Egbk::fc(CORE::substr $dirx,-CORE::length($subdir[-1]),CORE::length($subdir[-1])) eq Egbk::fc($subdir[-1])) {
+
+                    # short file name (8dot3name) here-----v
+                    my $shortleafdir = CORE::substr $dirx, 0, 8+1+3;
+                    CORE::substr($shortleafdir,8,1) = '.';
+                    $shortleafdir =~ s/ \. [ ]+ \z//oxms;
                     $shortdir = join '', @subdir[0..$#subdir-1], $shortleafdir;
                     last;
                 }
@@ -5133,8 +5154,8 @@ ITER_DO:
                             else {
                                 eval q{ flock($fh, LOCK_EX) };
                             }
-                            truncate($fh, 0) or croak "Can't truncate file: $realfilename.e";
-                            seek($fh, 0, 0)  or croak "Can't seek file: $realfilename.e";
+                            eval q{ truncate($fh, 0) };
+                            seek($fh, 0, 0) or croak "Can't seek file: $realfilename.e";
                             print {$fh} $script;
                             if ($^O eq 'MacOS') {
                                 eval q{
@@ -5341,8 +5362,8 @@ ITER_REQUIRE:
                         else {
                             eval q{ flock($fh, LOCK_EX) };
                         }
-                        truncate($fh, 0) or croak "Can't truncate file: $realfilename.e";
-                        seek($fh, 0, 0)  or croak "Can't seek file: $realfilename.e";
+                        eval q{ truncate($fh, 0) };
+                        seek($fh, 0, 0) or croak "Can't seek file: $realfilename.e";
                         print {$fh} $script;
                         if ($^O eq 'MacOS') {
                             eval q{
@@ -6453,7 +6474,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   to see the real permissions:
 
   $mode = (Egbk::stat($expr))[2];
-  printf "Permissions are %04o\n", $mode &07777;
+  printf "Permissions are %04o\n", $mode & 07777;
 
   If $expr is omitted, returns information on file given in $_.
   This subroutine function when the filename ends with chr(0x5C) on MSWin32.

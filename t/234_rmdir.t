@@ -12,6 +12,12 @@ if ($^O !~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
     exit;
 }
 
+if ($ENV{'PERL5SHELL'} =~ /Win95Cmd\.exe/xmsi) {
+    print "ok - 1 # SKIP $^X $0\n";
+    print "ok - 2 # SKIP $^X $0\n";
+    exit;
+}
+
 mkdir('directory',0777);
 if (rmdir('directory')) {
     print "ok - 1 rmdir $^X $__FILE__\n";

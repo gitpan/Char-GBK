@@ -96,7 +96,7 @@ open(FILE,">$script") || die "Can't open file: $script\n";
 print FILE <DATA>;
 close(FILE);
 
-if ($ENV{'COMSPEC'} =~ / \\COMMAND\.COM \z/oxmsi) {
+if (($ENV{'PERL5SHELL'}||$ENV{'COMSPEC'}) =~ / \\COMMAND\.COM \z/oxmsi) {
     $_ = `$^X $script aaa dt`;
 }
 else {
@@ -112,7 +112,7 @@ else {
     print "($aaa)\n";
 }
 
-if ($ENV{'COMSPEC'} =~ / \\COMMAND\.COM \z/oxmsi) {
+if (($ENV{'PERL5SHELL'}||$ENV{'COMSPEC'}) =~ / \\COMMAND\.COM \z/oxmsi) {
     $_ = `$^X $script •\ dt`;
 }
 else {

@@ -12,11 +12,17 @@ if ($^O !~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
     exit;
 }
 
+if ($ENV{'PERL5SHELL'} =~ /Win95Cmd\.exe/xmsi) {
+    print "ok - 1 # SKIP $^X $0\n";
+    print "ok - 2 # SKIP $^X $0\n";
+    exit;
+}
+
 my @qx = ();
 
 mkdir('directory',0777);
 system('echo 1 >directory\\qx.txt');
-if ($ENV{'COMSPEC'} =~ / \\COMMAND\.COM \z/oxmsi) {
+if (($ENV{'PERL5SHELL'}||$ENV{'COMSPEC'}) =~ / \\COMMAND\.COM \z/oxmsi) {
     @qx = split /\n/, `dir /b directory`;
 }
 else{
@@ -33,7 +39,7 @@ rmdir('directory');
 
 mkdir('D機能',0777);
 system('echo 1 >D機能\\qx.txt');
-if ($ENV{'COMSPEC'} =~ / \\COMMAND\.COM \z/oxmsi) {
+if (($ENV{'PERL5SHELL'}||$ENV{'COMSPEC'}) =~ / \\COMMAND\.COM \z/oxmsi) {
     @qx = split /\n/, `dir /b D機能`;
 }
 else{

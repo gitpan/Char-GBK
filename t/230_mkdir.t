@@ -11,7 +11,7 @@ if ($^O !~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
     exit;
 }
 
-if ($ENV{'COMSPEC'} =~ / \\COMMAND\.COM \z/oxmsi) {
+if (($ENV{'PERL5SHELL'}||$ENV{'COMSPEC'}) =~ / \\COMMAND\.COM \z/oxmsi) {
     system('rmdir D2機能');
 }
 else {
@@ -26,7 +26,7 @@ else {
     print "not ok - 1 mkdir: $! $^X $__FILE__\n";
 }
 
-if ($ENV{'COMSPEC'} =~ / \\COMMAND\.COM \z/oxmsi) {
+if (($ENV{'PERL5SHELL'}||$ENV{'COMSPEC'}) =~ / \\COMMAND\.COM \z/oxmsi) {
     system('rmdir D2機能');
 }
 else {

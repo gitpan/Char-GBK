@@ -11,6 +11,11 @@ if ($^O !~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
     exit;
 }
 
+if ($ENV{'PERL5SHELL'} =~ /Win95Cmd\.exe/xmsi) {
+    print "ok - 1 # SKIP $^X $0\n";
+    exit;
+}
+
 mkdir('directory',0777);
 mkdir('D機能',0777);
 open(FILE,'>D機能/file1.txt') || die "Can't open file: D機能/file1.txt\n";
@@ -25,7 +30,7 @@ close(FILE);
 
 # system
 my $command;
-if ($ENV{'COMSPEC'} =~ / \\COMMAND\.COM \z/oxmsi) {
+if (($ENV{'PERL5SHELL'}||$ENV{'COMSPEC'}) =~ / \\COMMAND\.COM \z/oxmsi) {
     $command = 'dir /b D機能 >NUL';
 }
 else {

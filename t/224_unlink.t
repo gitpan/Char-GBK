@@ -22,6 +22,12 @@ if ($chcp !~ /932/oxms) {
     exit;
 }
 
+if ($ENV{'PERL5SHELL'} =~ /Win95Cmd\.exe/xmsi) {
+    print "ok - 1 # SKIP $^X $0\n";
+    print "ok - 2 # SKIP $^X $0\n";
+    exit;
+}
+
 open(FILE,'>file') || die "Can't open file: file\n";
 print FILE "1\n";
 close(FILE);

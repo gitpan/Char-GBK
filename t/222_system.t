@@ -15,13 +15,18 @@ if ($chcp !~ /932|950/oxms) {
     exit;
 }
 
+if ($ENV{'PERL5SHELL'} =~ /Win95Cmd\.exe/xmsi) {
+    print "ok - 1 # SKIP $^X $0\n";
+    exit;
+}
+
 open(FILE,'>F機能') || die "Can't open file: F機能\n";
 print FILE "1\n";
 close(FILE);
 
 # system
 my $command;
-if ($ENV{'COMSPEC'} =~ / \\COMMAND\.COM \z/oxmsi) {
+if (($ENV{'PERL5SHELL'}||$ENV{'COMSPEC'}) =~ / \\COMMAND\.COM \z/oxmsi) {
     $command = 'dir /b F機能 >NUL';
 }
 else {
