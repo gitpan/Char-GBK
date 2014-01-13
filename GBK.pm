@@ -5,7 +5,7 @@ package GBK;
 #
 # http://search.cpan.org/dist/Char-GBK/
 #
-# Copyright (c) 2008, 2009, 2010, 2011, 2012, 2013 INABA Hitoshi <ina@cpan.org>
+# Copyright (c) 2008, 2009, 2010, 2011, 2012, 2013, 2014 INABA Hitoshi <ina@cpan.org>
 ######################################################################
 
 use 5.00503;    # Galapagos Consensus 1998 for primetools
@@ -17,7 +17,7 @@ use 5.00503;    # Galapagos Consensus 1998 for primetools
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.93 $ =~ /(\d+)/oxmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.94 $ =~ /(\d+)/oxmsg;
 
 BEGIN {
     if ($^X =~ / jperl /oxmsi) {
@@ -672,7 +672,7 @@ sub escape {
     elsif (/\G ( \( \s* (?: local \b | my \b | our \b | state \b )? \s* \$ $qq_scalar ) /oxgc) {
         my $e_string = e_string($1);
 
-        if (/\G ( \s* = $qq_paren \) ) ( \s* (?: =~ | !~ ) \s* ) (?= (?: tr|y) \b ) /oxgc) {
+        if (/\G ( \s* = $qq_paren \) ) ( \s* (?: =~ | !~ ) \s* ) (?= (?: tr | y ) \b ) /oxgc) {
             $tr_variable = $e_string . e_string($1);
             $bind_operator = $2;
             $slash = 'm//';
@@ -702,6 +702,12 @@ sub escape {
         return q{Egbk::MATCH()};
     }
 
+# $', ${'} --> $', ${'}
+    elsif (/\G ( \$' | \$\{'\}                                                                                 ) /oxmsgc) {
+        $slash = 'div';
+        return $1;
+    }
+
 # $POSTMATCH, ${POSTMATCH}, ${^POSTMATCH} --> Egbk::POSTMATCH()
     elsif (/\G (                 \$ \s* POSTMATCH \b | \$ \s* \{ \s* POSTMATCH \s* \} | \$ \s* \{\^POSTMATCH\} ) /oxmsgc) {
         $slash = 'div';
@@ -715,7 +721,7 @@ sub escape {
     elsif (/\G ( \$ $qq_scalar | $qq_substr ) /oxgc) {
         my $scalar = e_string($1);
 
-        if (/\G ( \s* (?: =~ | !~ ) \s* ) (?= (?: tr|y) \b ) /oxgc) {
+        if (/\G ( \s* (?: =~ | !~ ) \s* ) (?= (?: tr | y ) \b ) /oxgc) {
             $tr_variable = $scalar;
             $bind_operator = $1;
             $slash = 'm//';
@@ -749,7 +755,7 @@ sub escape {
     }
 
 # bareword
-    elsif (/\G ( \{ \s* (?: tr|index|rindex|reverse) \s* \} ) /oxmsgc) {
+    elsif (/\G ( \{ \s* (?: tr | index | rindex | reverse ) \s* \} ) /oxmsgc) {
         return $1;
     }
 
@@ -769,7 +775,8 @@ sub escape {
         return $1;
     }
 
-# $1, $2, $3 --> $2, $3, $4 (only when multibyte anchoring is enable)
+# $1, $2, $3 --> $2, $3, $4 after s/// with multibyte anchoring
+# $1, $2, $3 --> $1, $2, $3 otherwise
     elsif (/\G \$ ([1-9][0-9]*) /oxmsgc) {
         $slash = 'div';
         return e_capture($1);
@@ -811,7 +818,7 @@ sub escape {
 
 # variable or function
     #                  $ @ % & *     $ #
-    elsif (/\G ( (?: [\$\@\%\&\*] | \$\# | -> | \b sub \b) \s* (?: split|chop|index|rindex|lc|uc|fc|chr|ord|reverse|getc|tr|y|q|qq|qx|qw|m|s|qr|glob|lstat|opendir|stat|unlink|chdir) ) \b /oxmsgc) {
+    elsif (/\G ( (?: [\$\@\%\&\*] | \$\# | -> | \b sub \b) \s* (?: split | chop | index | rindex | lc | uc | fc | chr | ord | reverse | getc | tr | y | q | qq | qx | qw | m | s | qr | glob | lstat | opendir | stat | unlink | chdir ) ) \b /oxmsgc) {
         $slash = 'div';
         return $1;
     }
@@ -896,58 +903,57 @@ sub escape {
 
     elsif (/\G (-[rwxoRWXOezfdlpSbcugkTB](?:\s+-[rwxoRWXOezfdlpSbcugkTB])+) (\$ \w+(?: ::\w+)* (?: (?: ->)? (?: \( (?:$qq_paren)*? \) | \{ (?:$qq_brace)+? \} | \[ (?:$qq_bracket)+? \] ) )*) /oxgc)
                                                                                                            { $slash = 'm//'; return "Egbk::filetest(qw($1),$2)"; }
-    elsif (/\G (-[rwxoRWXOezfdlpSbcugkTB](?:\s+-[rwxoRWXOezfdlpSbcugkTB])+) \( ((?:$qq_paren)*?) \) /oxgc)
-                                                                                                           { $slash = 'm//'; return "Egbk::filetest(qw($1),$2)"; }
-    elsif (/\G ((?:-[rwxoRWXOezfdlpSbcugkTB]\s+){2,}) (?= [a-z]+) /oxgc)                                   { $slash = 'm//'; return "Egbk::filetest qw($1),";    }
-    elsif (/\G ((?:-[rwxoRWXOezfdlpSbcugkTB]\s+){2,}) (\w+) /oxgc)                                         { $slash = 'm//'; return "Egbk::filetest(qw($1),$2)"; }
+    elsif (/\G (-[rwxoRWXOezfdlpSbcugkTB](?:\s+-[rwxoRWXOezfdlpSbcugkTB])+) \( ((?:$qq_paren)*?) \) /oxgc) { $slash = 'm//'; return "Egbk::filetest(qw($1),$2)"; }
+    elsif (/\G ((?:-[rwxoRWXOezfdlpSbcugkTB]\s+){2,}) (?= [a-z]+)                                   /oxgc) { $slash = 'm//'; return "Egbk::filetest qw($1),";    }
+    elsif (/\G ((?:-[rwxoRWXOezfdlpSbcugkTB]\s+){2,}) (\w+)                                         /oxgc) { $slash = 'm//'; return "Egbk::filetest(qw($1),$2)"; }
 
-    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+    \s* (\") ((?:$qq_char)+?)             (\") /oxgc)    { $slash = 'm//'; return "Egbk::$1(" . e_qq('',  $2,$4,$3) . ")"; }
-    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ qq \s* (\#) ((?:$qq_char)+?)             (\#) /oxgc)    { $slash = 'm//'; return "Egbk::$1(" . e_qq('qq',$2,$4,$3) . ")"; }
-    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ qq \s* (\() ((?:$qq_paren)+?)            (\)) /oxgc)    { $slash = 'm//'; return "Egbk::$1(" . e_qq('qq',$2,$4,$3) . ")"; }
-    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ qq \s* (\{) ((?:$qq_brace)+?)            (\}) /oxgc)    { $slash = 'm//'; return "Egbk::$1(" . e_qq('qq',$2,$4,$3) . ")"; }
-    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ qq \s* (\[) ((?:$qq_bracket)+?)          (\]) /oxgc)    { $slash = 'm//'; return "Egbk::$1(" . e_qq('qq',$2,$4,$3) . ")"; }
-    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ qq \s* (\<) ((?:$qq_angle)+?)            (\>) /oxgc)    { $slash = 'm//'; return "Egbk::$1(" . e_qq('qq',$2,$4,$3) . ")"; }
-    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ qq \s* (\S) ((?:$qq_char)+?)             (\2) /oxgc)    { $slash = 'm//'; return "Egbk::$1(" . e_qq('qq',$2,$4,$3) . ")"; }
+    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+    \s* (\") ((?:$qq_char)+?)                (\") /oxgc) { $slash = 'm//'; return "Egbk::$1(" . e_qq('',  $2,$4,$3) . ")"; }
+    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ qq \s* (\#) ((?:$qq_char)+?)                (\#) /oxgc) { $slash = 'm//'; return "Egbk::$1(" . e_qq('qq',$2,$4,$3) . ")"; }
+    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ qq \s* (\() ((?:$qq_paren)+?)               (\)) /oxgc) { $slash = 'm//'; return "Egbk::$1(" . e_qq('qq',$2,$4,$3) . ")"; }
+    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ qq \s* (\{) ((?:$qq_brace)+?)               (\}) /oxgc) { $slash = 'm//'; return "Egbk::$1(" . e_qq('qq',$2,$4,$3) . ")"; }
+    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ qq \s* (\[) ((?:$qq_bracket)+?)             (\]) /oxgc) { $slash = 'm//'; return "Egbk::$1(" . e_qq('qq',$2,$4,$3) . ")"; }
+    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ qq \s* (\<) ((?:$qq_angle)+?)               (\>) /oxgc) { $slash = 'm//'; return "Egbk::$1(" . e_qq('qq',$2,$4,$3) . ")"; }
+    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ qq \s* (\S) ((?:$qq_char)+?)                (\2) /oxgc) { $slash = 'm//'; return "Egbk::$1(" . e_qq('qq',$2,$4,$3) . ")"; }
 
-    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+    \s* (\') ((?:\\\'|\\\\|$q_char)+?)    (\') /oxgc)    { $slash = 'm//'; return "Egbk::$1(" . e_q ('',  $2,$4,$3) . ")"; }
-    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ q  \s* (\#) ((?:\\\#|\\\\|$q_char)+?)    (\#) /oxgc)    { $slash = 'm//'; return "Egbk::$1(" . e_q ('q', $2,$4,$3) . ")"; }
-    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ q  \s* (\() ((?:\\\)|\\\\|$q_paren)+?)   (\)) /oxgc)    { $slash = 'm//'; return "Egbk::$1(" . e_q ('q', $2,$4,$3) . ")"; }
-    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ q  \s* (\{) ((?:\\\}|\\\\|$q_brace)+?)   (\}) /oxgc)    { $slash = 'm//'; return "Egbk::$1(" . e_q ('q', $2,$4,$3) . ")"; }
-    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ q  \s* (\[) ((?:\\\]|\\\\|$q_bracket)+?) (\]) /oxgc)    { $slash = 'm//'; return "Egbk::$1(" . e_q ('q', $2,$4,$3) . ")"; }
-    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ q  \s* (\<) ((?:\\\>|\\\\|$q_angle)+?)   (\>) /oxgc)    { $slash = 'm//'; return "Egbk::$1(" . e_q ('q', $2,$4,$3) . ")"; }
-    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ q  \s* (\S) ((?:\\\2|\\\\|$q_char)+?)    (\2) /oxgc)    { $slash = 'm//'; return "Egbk::$1(" . e_q ('q', $2,$4,$3) . ")"; }
+    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+    \s* (\') ((?:\\\'|\\\\|$q_char)+?)       (\') /oxgc) { $slash = 'm//'; return "Egbk::$1(" . e_q ('',  $2,$4,$3) . ")"; }
+    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ q  \s* (\#) ((?:\\\#|\\\\|$q_char)+?)       (\#) /oxgc) { $slash = 'm//'; return "Egbk::$1(" . e_q ('q', $2,$4,$3) . ")"; }
+    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ q  \s* (\() ((?:\\\)|\\\\|$q_paren)+?)      (\)) /oxgc) { $slash = 'm//'; return "Egbk::$1(" . e_q ('q', $2,$4,$3) . ")"; }
+    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ q  \s* (\{) ((?:\\\}|\\\\|$q_brace)+?)      (\}) /oxgc) { $slash = 'm//'; return "Egbk::$1(" . e_q ('q', $2,$4,$3) . ")"; }
+    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ q  \s* (\[) ((?:\\\]|\\\\|$q_bracket)+?)    (\]) /oxgc) { $slash = 'm//'; return "Egbk::$1(" . e_q ('q', $2,$4,$3) . ")"; }
+    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ q  \s* (\<) ((?:\\\>|\\\\|$q_angle)+?)      (\>) /oxgc) { $slash = 'm//'; return "Egbk::$1(" . e_q ('q', $2,$4,$3) . ")"; }
+    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ q  \s* (\S) ((?:\\\2|\\\\|$q_char)+?)       (\2) /oxgc) { $slash = 'm//'; return "Egbk::$1(" . e_q ('q', $2,$4,$3) . ")"; }
 
     elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s* (\$ \w+(?: ::\w+)* (?: (?: ->)? (?: \( (?:$qq_paren)*? \) | \{ (?:$qq_brace)+? \} | \[ (?:$qq_bracket)+? \] ) )*) /oxgc)
-                                                                                                           { $slash = 'm//'; return "Egbk::$1($2)";      }
-    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s* \( ((?:$qq_paren)*?) \) /oxgc)                          { $slash = 'm//'; return "Egbk::$1($2)";      }
-    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) (?= \s+ [a-z]+) /oxgc)                                      { $slash = 'm//'; return "Egbk::$1";          }
-    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ (\w+) /oxgc)                                            { $slash = 'm//'; return "Egbk::$1(::"."$2)"; }
-    elsif (/\G -(t)                            \s+ (\w+) /oxgc)                                            { $slash = 'm//'; return "-t $2";              }
-    elsif (/\G \b lstat         (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) /oxgc) { $slash = 'm//'; return 'Egbk::lstat';             }
-    elsif (/\G \b stat          (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) /oxgc) { $slash = 'm//'; return 'Egbk::stat';              }
+                                                                                                           { $slash = 'm//'; return "Egbk::$1($2)";             }
+    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s* \( ((?:$qq_paren)*?) \)                          /oxgc) { $slash = 'm//'; return "Egbk::$1($2)";             }
+    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) (?= \s+ [a-z]+)                                      /oxgc) { $slash = 'm//'; return "Egbk::$1";                 }
+    elsif (/\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ (\w+)                                            /oxgc) { $slash = 'm//'; return "Egbk::$1(::"."$2)";        }
+    elsif (/\G -(t)                            \s+ (\w+)                                            /oxgc) { $slash = 'm//'; return "-t $2";                     }
+    elsif (/\G \b lstat         (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(])                                /oxgc) { $slash = 'm//'; return 'Egbk::lstat';              }
+    elsif (/\G \b stat          (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(])                                /oxgc) { $slash = 'm//'; return 'Egbk::stat';               }
 
     # "-s '' ..." means file test "-s 'filename' ..." (not means "- s/// ...")
-    elsif (/\G -s                               \s+    \s* (\") ((?:$qq_char)+?)             (\") /oxgc)   { $slash = 'm//'; return '-s ' . e_qq('',  $1,$3,$2); }
-    elsif (/\G -s                               \s+ qq \s* (\#) ((?:$qq_char)+?)             (\#) /oxgc)   { $slash = 'm//'; return '-s ' . e_qq('qq',$1,$3,$2); }
-    elsif (/\G -s                               \s+ qq \s* (\() ((?:$qq_paren)+?)            (\)) /oxgc)   { $slash = 'm//'; return '-s ' . e_qq('qq',$1,$3,$2); }
-    elsif (/\G -s                               \s+ qq \s* (\{) ((?:$qq_brace)+?)            (\}) /oxgc)   { $slash = 'm//'; return '-s ' . e_qq('qq',$1,$3,$2); }
-    elsif (/\G -s                               \s+ qq \s* (\[) ((?:$qq_bracket)+?)          (\]) /oxgc)   { $slash = 'm//'; return '-s ' . e_qq('qq',$1,$3,$2); }
-    elsif (/\G -s                               \s+ qq \s* (\<) ((?:$qq_angle)+?)            (\>) /oxgc)   { $slash = 'm//'; return '-s ' . e_qq('qq',$1,$3,$2); }
-    elsif (/\G -s                               \s+ qq \s* (\S) ((?:$qq_char)+?)             (\1) /oxgc)   { $slash = 'm//'; return '-s ' . e_qq('qq',$1,$3,$2); }
+    elsif (/\G -s                               \s+    \s* (\") ((?:$qq_char)+?)               (\") /oxgc) { $slash = 'm//'; return '-s ' . e_qq('',  $1,$3,$2); }
+    elsif (/\G -s                               \s+ qq \s* (\#) ((?:$qq_char)+?)               (\#) /oxgc) { $slash = 'm//'; return '-s ' . e_qq('qq',$1,$3,$2); }
+    elsif (/\G -s                               \s+ qq \s* (\() ((?:$qq_paren)+?)              (\)) /oxgc) { $slash = 'm//'; return '-s ' . e_qq('qq',$1,$3,$2); }
+    elsif (/\G -s                               \s+ qq \s* (\{) ((?:$qq_brace)+?)              (\}) /oxgc) { $slash = 'm//'; return '-s ' . e_qq('qq',$1,$3,$2); }
+    elsif (/\G -s                               \s+ qq \s* (\[) ((?:$qq_bracket)+?)            (\]) /oxgc) { $slash = 'm//'; return '-s ' . e_qq('qq',$1,$3,$2); }
+    elsif (/\G -s                               \s+ qq \s* (\<) ((?:$qq_angle)+?)              (\>) /oxgc) { $slash = 'm//'; return '-s ' . e_qq('qq',$1,$3,$2); }
+    elsif (/\G -s                               \s+ qq \s* (\S) ((?:$qq_char)+?)               (\1) /oxgc) { $slash = 'm//'; return '-s ' . e_qq('qq',$1,$3,$2); }
 
-    elsif (/\G -s                               \s+    \s* (\') ((?:\\\'|\\\\|$q_char)+?)    (\') /oxgc)   { $slash = 'm//'; return '-s ' . e_q ('',  $1,$3,$2); }
-    elsif (/\G -s                               \s+ q  \s* (\#) ((?:\\\#|\\\\|$q_char)+?)    (\#) /oxgc)   { $slash = 'm//'; return '-s ' . e_q ('q', $1,$3,$2); }
-    elsif (/\G -s                               \s+ q  \s* (\() ((?:\\\)|\\\\|$q_paren)+?)   (\)) /oxgc)   { $slash = 'm//'; return '-s ' . e_q ('q', $1,$3,$2); }
-    elsif (/\G -s                               \s+ q  \s* (\{) ((?:\\\}|\\\\|$q_brace)+?)   (\}) /oxgc)   { $slash = 'm//'; return '-s ' . e_q ('q', $1,$3,$2); }
-    elsif (/\G -s                               \s+ q  \s* (\[) ((?:\\\]|\\\\|$q_bracket)+?) (\]) /oxgc)   { $slash = 'm//'; return '-s ' . e_q ('q', $1,$3,$2); }
-    elsif (/\G -s                               \s+ q  \s* (\<) ((?:\\\>|\\\\|$q_angle)+?)   (\>) /oxgc)   { $slash = 'm//'; return '-s ' . e_q ('q', $1,$3,$2); }
-    elsif (/\G -s                               \s+ q  \s* (\S) ((?:\\\1|\\\\|$q_char)+?)    (\1) /oxgc)   { $slash = 'm//'; return '-s ' . e_q ('q', $1,$3,$2); }
+    elsif (/\G -s                               \s+    \s* (\') ((?:\\\'|\\\\|$q_char)+?)      (\') /oxgc) { $slash = 'm//'; return '-s ' . e_q ('',  $1,$3,$2); }
+    elsif (/\G -s                               \s+ q  \s* (\#) ((?:\\\#|\\\\|$q_char)+?)      (\#) /oxgc) { $slash = 'm//'; return '-s ' . e_q ('q', $1,$3,$2); }
+    elsif (/\G -s                               \s+ q  \s* (\() ((?:\\\)|\\\\|$q_paren)+?)     (\)) /oxgc) { $slash = 'm//'; return '-s ' . e_q ('q', $1,$3,$2); }
+    elsif (/\G -s                               \s+ q  \s* (\{) ((?:\\\}|\\\\|$q_brace)+?)     (\}) /oxgc) { $slash = 'm//'; return '-s ' . e_q ('q', $1,$3,$2); }
+    elsif (/\G -s                               \s+ q  \s* (\[) ((?:\\\]|\\\\|$q_bracket)+?)   (\]) /oxgc) { $slash = 'm//'; return '-s ' . e_q ('q', $1,$3,$2); }
+    elsif (/\G -s                               \s+ q  \s* (\<) ((?:\\\>|\\\\|$q_angle)+?)     (\>) /oxgc) { $slash = 'm//'; return '-s ' . e_q ('q', $1,$3,$2); }
+    elsif (/\G -s                               \s+ q  \s* (\S) ((?:\\\1|\\\\|$q_char)+?)      (\1) /oxgc) { $slash = 'm//'; return '-s ' . e_q ('q', $1,$3,$2); }
 
     elsif (/\G -s                               \s* (\$ \w+(?: ::\w+)* (?: (?: ->)? (?: \( (?:$qq_paren)*? \) | \{ (?:$qq_brace)+? \} | \[ (?:$qq_bracket)+? \] ) )*) /oxgc)
                                                                                                            { $slash = 'm//'; return "-s $1";   }
-    elsif (/\G -s                               \s* \( ((?:$qq_paren)*?) \) /oxgc)                         { $slash = 'm//'; return "-s ($1)"; }
-    elsif (/\G -s                               (?= \s+ [a-z]+) /oxgc)                                     { $slash = 'm//'; return '-s';      }
-    elsif (/\G -s                               \s+ (\w+) /oxgc)                                           { $slash = 'm//'; return "-s $1";   }
+    elsif (/\G -s                               \s* \( ((?:$qq_paren)*?) \)                         /oxgc) { $slash = 'm//'; return "-s ($1)"; }
+    elsif (/\G -s                               (?= \s+ [a-z]+)                                     /oxgc) { $slash = 'm//'; return '-s';      }
+    elsif (/\G -s                               \s+ (\w+)                                           /oxgc) { $slash = 'm//'; return "-s $1";   }
 
     elsif (/\G \b bytes::length (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) /oxgc) { $slash = 'm//'; return 'length';                   }
     elsif (/\G \b bytes::chr    (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) /oxgc) { $slash = 'm//'; return 'chr';                      }
@@ -955,18 +961,19 @@ sub escape {
     elsif (/\G \b bytes::ord    (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) /oxgc) { $slash = 'div'; return 'ord';                      }
     elsif (/\G \b ord           (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) /oxgc) { $slash = 'div'; return $function_ord;              }
     elsif (/\G \b glob          (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) /oxgc) { $slash = 'm//'; return 'Egbk::glob';              }
-    elsif (/\G \b lc \b         (?! \s* => )                         /oxgc) { $slash = 'm//'; return 'Egbk::lc_';               }
-    elsif (/\G \b lcfirst \b    (?! \s* => )                         /oxgc) { $slash = 'm//'; return 'Egbk::lcfirst_';          }
-    elsif (/\G \b uc \b         (?! \s* => )                         /oxgc) { $slash = 'm//'; return 'Egbk::uc_';               }
-    elsif (/\G \b ucfirst \b    (?! \s* => )                         /oxgc) { $slash = 'm//'; return 'Egbk::ucfirst_';          }
-    elsif (/\G \b fc \b         (?! \s* => )                         /oxgc) { $slash = 'm//'; return 'Egbk::fc_';               }
+    elsif (/\G \b lc \b            (?! \s* => )                      /oxgc) { $slash = 'm//'; return 'Egbk::lc_';               }
+    elsif (/\G \b lcfirst \b       (?! \s* => )                      /oxgc) { $slash = 'm//'; return 'Egbk::lcfirst_';          }
+    elsif (/\G \b uc \b            (?! \s* => )                      /oxgc) { $slash = 'm//'; return 'Egbk::uc_';               }
+    elsif (/\G \b ucfirst \b       (?! \s* => )                      /oxgc) { $slash = 'm//'; return 'Egbk::ucfirst_';          }
+    elsif (/\G \b fc \b            (?! \s* => )                      /oxgc) { $slash = 'm//'; return 'Egbk::fc_';               }
+    elsif (/\G \b lstat \b         (?! \s* => )                      /oxgc) { $slash = 'm//'; return 'Egbk::lstat_';            }
+    elsif (/\G \b stat \b          (?! \s* => )                      /oxgc) { $slash = 'm//'; return 'Egbk::stat_';             }
     elsif (/\G    (-[rwxoRWXOezfdlpSbcugkTB](?:\s+-[rwxoRWXOezfdlpSbcugkTB])+)
-                           \b    (?! \s* => )                        /oxgc) { $slash = 'm//'; return "Egbk::filetest_(qw($1))"; }
+                     \b            (?! \s* => )                      /oxgc) { $slash = 'm//'; return "Egbk::filetest_(qw($1))"; }
     elsif (/\G    -([rwxoRWXOezsfdlpSbcugkTBMAC])
-                           \b    (?! \s* => )                        /oxgc) { $slash = 'm//'; return "Egbk::${1}_";             }
-    elsif (/\G \b lstat \b      (?! \s* => )                         /oxgc) { $slash = 'm//'; return 'Egbk::lstat_';            }
-    elsif (/\G \b stat \b       (?! \s* => )                         /oxgc) { $slash = 'm//'; return 'Egbk::stat_';             }
-    elsif (/\G    -s \b         (?! \s* => )                         /oxgc) { $slash = 'm//'; return '-s ';                      }
+                     \b            (?! \s* => )                      /oxgc) { $slash = 'm//'; return "Egbk::${1}_";             }
+
+    elsif (/\G    -s \b            (?! \s* => )                      /oxgc) { $slash = 'm//'; return '-s ';                      }
 
     elsif (/\G \b bytes::length \b (?! \s* => )                      /oxgc) { $slash = 'm//'; return 'length';                   }
     elsif (/\G \b bytes::chr \b    (?! \s* => )                      /oxgc) { $slash = 'm//'; return 'chr';                      }
@@ -978,7 +985,7 @@ sub escape {
     elsif (/\G \b getc \b          (?! \s* => )                      /oxgc) { $slash = 'm//'; return $function_getc;             }
     elsif (/\G \b opendir (\s* \( \s*) (?=[A-Za-z_])                 /oxgc) { $slash = 'm//'; return "Egbk::opendir$1*";        }
     elsif (/\G \b opendir (\s+)        (?=[A-Za-z_])                 /oxgc) { $slash = 'm//'; return "Egbk::opendir$1*";        }
-    elsif (/\G \b unlink \b     (?! \s* => )                         /oxgc) { $slash = 'm//'; return 'Egbk::unlink';            }
+    elsif (/\G \b unlink \b        (?! \s* => )                      /oxgc) { $slash = 'm//'; return 'Egbk::unlink';            }
 
 # chdir
     elsif (/\G \b (chdir) \b    (?! \s* => ) /oxgc) {
@@ -1201,7 +1208,7 @@ sub escape {
     # of ISBN 4-89052-384-7 Programming perl
     # (Japanese title is: Perl puroguramingu)
 
-    elsif (/\G \b (tr|y) \b /oxgc) {
+    elsif (/\G \b ( tr | y ) \b /oxgc) {
         my $ope = $1;
 
         #        $1   $2               $3   $4               $5   $6
@@ -1693,11 +1700,11 @@ sub escape {
     }
 
 # do
-    elsif (/\G \b do (?= \s* \{ )                    /oxmsgc)                                  { return 'do';                }
-    elsif (/\G \b do (?= \s+ (?: q|qq|qx) \b)        /oxmsgc)                                  { return 'Egbk::do';         }
-    elsif (/\G \b do (?= \s+ \w+)                    /oxmsgc)                                  { return 'do';                }
-    elsif (/\G \b do (?= \s* \$ \w+ (?: ::\w+)* \( ) /oxmsgc)                                  { return 'do';                }
-    elsif (/\G \b do \b                              /oxmsgc)                                  { return 'Egbk::do';         }
+    elsif (/\G \b do (?= \s* \{ )                                                     /oxmsgc) { return 'do';                }
+    elsif (/\G \b do (?= \s+ (?: q | qq | qx ) \b)                                    /oxmsgc) { return 'Egbk::do';         }
+    elsif (/\G \b do (?= \s+ \w+)                                                     /oxmsgc) { return 'do';                }
+    elsif (/\G \b do (?= \s* \$ \w+ (?: ::\w+)* \( )                                  /oxmsgc) { return 'do';                }
+    elsif (/\G \b do \b                                                               /oxmsgc) { return 'Egbk::do';         }
 
 # require ignore module
     elsif (/\G \b require (\s+ (?:$ignore_modules) .*? ;) ([ \t]* [#\n])                  /oxmsgc) { return "# require$1$2";   }
@@ -1705,24 +1712,24 @@ sub escape {
     elsif (/\G \b require (\s+ (?:$ignore_modules)) \b                                    /oxmsgc) { return "# require$1";     }
 
 # require version number
-    elsif (/\G \b require \s+ (0[0-7_]*)                    \s* ; /oxmsgc)                     { return "require $1;";       }
-    elsif (/\G \b require \s+ ([1-9][0-9_]*(?:\.[0-9_]+)*)  \s* ; /oxmsgc)                     { return "require $1;";       }
-    elsif (/\G \b require \s+ (v[0-9][0-9_]*(?:\.[0-9_]+)*) \s* ; /oxmsgc)                     { return "require $1;";       }
+    elsif (/\G \b require \s+ (0[0-7_]*)                    \s* ;                     /oxmsgc) { return "require $1;";       }
+    elsif (/\G \b require \s+ ([1-9][0-9_]*(?:\.[0-9_]+)*)  \s* ;                     /oxmsgc) { return "require $1;";       }
+    elsif (/\G \b require \s+ (v[0-9][0-9_]*(?:\.[0-9_]+)*) \s* ;                     /oxmsgc) { return "require $1;";       }
 
 # require bare package name
-    elsif (/\G \b require \s+ ([A-Za-z_]\w* (?: :: [A-Za-z_]\w*)*) \s* ; /oxmsgc)              { return "require $1;";       }
+    elsif (/\G \b require \s+ ([A-Za-z_]\w* (?: :: [A-Za-z_]\w*)*) \s* ;              /oxmsgc) { return "require $1;";       }
 
 # require else
-    elsif (/\G \b require                                   \s* ; /oxmsgc)                     { return 'Egbk::require;';   }
-    elsif (/\G \b require \b                                      /oxmsgc)                     { return 'Egbk::require';    }
+    elsif (/\G \b require                                   \s* ;                     /oxmsgc) { return 'Egbk::require;';   }
+    elsif (/\G \b require \b                                                          /oxmsgc) { return 'Egbk::require';    }
 
 # use strict; --> use strict; no strict qw(refs);
-    elsif (/\G \b use (\s+ strict .*? ;) ([ \t]* [#\n])                  /oxmsgc)              { return "use$1 no strict qw(refs);$2";   }
-    elsif (/\G \b use (\s+ strict .*? ;) ([ \t]* [^\x81-\xFE#]) /oxmsgc)              { return "use$1 no strict qw(refs);\n$2"; }
-    elsif (/\G \b use (\s+ strict) \b                                    /oxmsgc)              { return "use$1; no strict qw(refs)";     }
+    elsif (/\G \b use (\s+ strict .*? ;) ([ \t]* [#\n])                               /oxmsgc) { return "use$1 no strict qw(refs);$2";   }
+    elsif (/\G \b use (\s+ strict .*? ;) ([ \t]* [^\x81-\xFE#])              /oxmsgc) { return "use$1 no strict qw(refs);\n$2"; }
+    elsif (/\G \b use (\s+ strict) \b                                                 /oxmsgc) { return "use$1; no strict qw(refs)";     }
 
 # use 5.12.0; --> use 5.12.0; no strict qw(refs);
-    elsif (/\G \b use \s+ (([1-9][0-9_]*)(?:\.([0-9_]+))*)  \s* ;        /oxmsgc)              {
+    elsif (/\G \b use \s+ (([1-9][0-9_]*)(?:\.([0-9_]+))*)  \s* ;                     /oxmsgc) {
         if (($2 >= 6) or (($2 == 5) and ($3 >= 12))) {
             return "use$1 no strict qw(refs);";
         }
@@ -1730,7 +1737,7 @@ sub escape {
             return "use$1";
         }
     }
-    elsif (/\G \b use \s+ (v([0-9][0-9_]*)(?:\.([0-9_]+))*) \s* ;        /oxmsgc)              {
+    elsif (/\G \b use \s+ (v([0-9][0-9_]*)(?:\.([0-9_]+))*) \s* ;                    /oxmsgc)  {
         if (($2 >= 6) or (($2 == 5) and ($3 >= 12))) {
             return "use$1 no strict qw(refs);";
         }
@@ -1765,15 +1772,15 @@ sub escape {
     elsif (/\G \b use \s+ ([A-Z]\w*(?: ::\w+)*)                                 \s* ; /oxmsgc) { return e_use_noparam($1);   }
 
 # use with import parameters
-    elsif (/\G \b use \s+ ([A-Z]\w*(?: ::\w+)*) \s* (                (\()          [^\x81-\xFE)]* \)) \s* ; /oxmsgc) { return e_use($1,$2); }
-    elsif (/\G \b use \s+ ([A-Z]\w*(?: ::\w+)*) \s* (                (\')          [^\x81-\xFE']* \') \s* ; /oxmsgc) { return e_use($1,$2); }
-    elsif (/\G \b use \s+ ([A-Z]\w*(?: ::\w+)*) \s* (                (\")          [^\x81-\xFE"]* \") \s* ; /oxmsgc) { return e_use($1,$2); }
-    elsif (/\G \b use \s+ ([A-Z]\w*(?: ::\w+)*) \s+ ((?:q|qq|qw) \s* (\()          [^\x81-\xFE)]* \)) \s* ; /oxmsgc) { return e_use($1,$2); }
-    elsif (/\G \b use \s+ ([A-Z]\w*(?: ::\w+)*) \s+ ((?:q|qq|qw) \s* (\{)          (?:$q_char)*?           \}) \s* ; /oxmsgc) { return e_use($1,$2); }
-    elsif (/\G \b use \s+ ([A-Z]\w*(?: ::\w+)*) \s+ ((?:q|qq|qw) \s* (\[)          (?:$q_char)*?           \]) \s* ; /oxmsgc) { return e_use($1,$2); }
-    elsif (/\G \b use \s+ ([A-Z]\w*(?: ::\w+)*) \s+ ((?:q|qq|qw) \s* (\<)          [^\x81-\xFE>]* \>) \s* ; /oxmsgc) { return e_use($1,$2); }
-    elsif (/\G \b use \s+ ([A-Z]\w*(?: ::\w+)*) \s+ ((?:q|qq|qw) \s* ([\x21-\x3F]) .*?                     \3) \s* ; /oxmsgc) { return e_use($1,$2); }
-    elsif (/\G \b use \s+ ([A-Z]\w*(?: ::\w+)*) \s+ ((?:q|qq|qw) \s* (\S)          (?:$q_char)*?           \3) \s* ; /oxmsgc) { return e_use($1,$2); }
+    elsif (/\G \b use \s+ ([A-Z]\w*(?: ::\w+)*) \s* (                      (\()    [^\x81-\xFE)]* \)) \s* ; /oxmsgc) { return e_use($1,$2); }
+    elsif (/\G \b use \s+ ([A-Z]\w*(?: ::\w+)*) \s* (                      (\')    [^\x81-\xFE']* \') \s* ; /oxmsgc) { return e_use($1,$2); }
+    elsif (/\G \b use \s+ ([A-Z]\w*(?: ::\w+)*) \s* (                      (\")    [^\x81-\xFE"]* \") \s* ; /oxmsgc) { return e_use($1,$2); }
+    elsif (/\G \b use \s+ ([A-Z]\w*(?: ::\w+)*) \s+ ((?: q | qq | qw ) \s* (\()    [^\x81-\xFE)]* \)) \s* ; /oxmsgc) { return e_use($1,$2); }
+    elsif (/\G \b use \s+ ([A-Z]\w*(?: ::\w+)*) \s+ ((?: q | qq | qw ) \s* (\{)    (?:$q_char)*?           \}) \s* ; /oxmsgc) { return e_use($1,$2); }
+    elsif (/\G \b use \s+ ([A-Z]\w*(?: ::\w+)*) \s+ ((?: q | qq | qw ) \s* (\[)    (?:$q_char)*?           \]) \s* ; /oxmsgc) { return e_use($1,$2); }
+    elsif (/\G \b use \s+ ([A-Z]\w*(?: ::\w+)*) \s+ ((?: q | qq | qw ) \s* (\<)    [^\x81-\xFE>]* \>) \s* ; /oxmsgc) { return e_use($1,$2); }
+    elsif (/\G \b use \s+ ([A-Z]\w*(?: ::\w+)*) \s+ ((?: q | qq | qw ) \s* ([\x21-\x3F]) .*?               \3) \s* ; /oxmsgc) { return e_use($1,$2); }
+    elsif (/\G \b use \s+ ([A-Z]\w*(?: ::\w+)*) \s+ ((?: q | qq | qw ) \s* (\S)    (?:$q_char)*?           \3) \s* ; /oxmsgc) { return e_use($1,$2); }
 
 # no without unimport
     elsif (/\G \b no  \s+ (0[0-7_]*)                                            \s* ; /oxmsgc) { return "no $1;";            }
@@ -1791,15 +1798,15 @@ sub escape {
     elsif (/\G \b no  \s+ ([A-Z]\w*(?: ::\w+)*)                                 \s* ; /oxmsgc) { return e_no_noparam($1);    }
 
 # no with unimport parameters
-    elsif (/\G \b no  \s+ ([A-Z]\w*(?: ::\w+)*) \s* (                (\()          [^\x81-\xFE)]* \)) \s* ; /oxmsgc) { return e_no($1,$2);  }
-    elsif (/\G \b no  \s+ ([A-Z]\w*(?: ::\w+)*) \s* (                (\')          [^\x81-\xFE']* \') \s* ; /oxmsgc) { return e_no($1,$2);  }
-    elsif (/\G \b no  \s+ ([A-Z]\w*(?: ::\w+)*) \s* (                (\")          [^\x81-\xFE"]* \") \s* ; /oxmsgc) { return e_no($1,$2);  }
-    elsif (/\G \b no  \s+ ([A-Z]\w*(?: ::\w+)*) \s+ ((?:q|qq|qw) \s* (\()          [^\x81-\xFE)]* \)) \s* ; /oxmsgc) { return e_no($1,$2);  }
-    elsif (/\G \b no  \s+ ([A-Z]\w*(?: ::\w+)*) \s+ ((?:q|qq|qw) \s* (\{)          (?:$q_char)*?           \}) \s* ; /oxmsgc) { return e_no($1,$2);  }
-    elsif (/\G \b no  \s+ ([A-Z]\w*(?: ::\w+)*) \s+ ((?:q|qq|qw) \s* (\[)          (?:$q_char)*?           \]) \s* ; /oxmsgc) { return e_no($1,$2);  }
-    elsif (/\G \b no  \s+ ([A-Z]\w*(?: ::\w+)*) \s+ ((?:q|qq|qw) \s* (\<)          [^\x81-\xFE>]* \>) \s* ; /oxmsgc) { return e_no($1,$2);  }
-    elsif (/\G \b no  \s+ ([A-Z]\w*(?: ::\w+)*) \s+ ((?:q|qq|qw) \s* ([\x21-\x3F]) .*?                     \3) \s* ; /oxmsgc) { return e_no($1,$2);  }
-    elsif (/\G \b no  \s+ ([A-Z]\w*(?: ::\w+)*) \s+ ((?:q|qq|qw) \s* (\S)          (?:$q_char)*?           \3) \s* ; /oxmsgc) { return e_no($1,$2);  }
+    elsif (/\G \b no  \s+ ([A-Z]\w*(?: ::\w+)*) \s* (                      (\()    [^\x81-\xFE)]* \)) \s* ; /oxmsgc) { return e_no($1,$2);  }
+    elsif (/\G \b no  \s+ ([A-Z]\w*(?: ::\w+)*) \s* (                      (\')    [^\x81-\xFE']* \') \s* ; /oxmsgc) { return e_no($1,$2);  }
+    elsif (/\G \b no  \s+ ([A-Z]\w*(?: ::\w+)*) \s* (                      (\")    [^\x81-\xFE"]* \") \s* ; /oxmsgc) { return e_no($1,$2);  }
+    elsif (/\G \b no  \s+ ([A-Z]\w*(?: ::\w+)*) \s+ ((?: q | qq | qw ) \s* (\()    [^\x81-\xFE)]* \)) \s* ; /oxmsgc) { return e_no($1,$2);  }
+    elsif (/\G \b no  \s+ ([A-Z]\w*(?: ::\w+)*) \s+ ((?: q | qq | qw ) \s* (\{)    (?:$q_char)*?           \}) \s* ; /oxmsgc) { return e_no($1,$2);  }
+    elsif (/\G \b no  \s+ ([A-Z]\w*(?: ::\w+)*) \s+ ((?: q | qq | qw ) \s* (\[)    (?:$q_char)*?           \]) \s* ; /oxmsgc) { return e_no($1,$2);  }
+    elsif (/\G \b no  \s+ ([A-Z]\w*(?: ::\w+)*) \s+ ((?: q | qq | qw ) \s* (\<)    [^\x81-\xFE>]* \>) \s* ; /oxmsgc) { return e_no($1,$2);  }
+    elsif (/\G \b no  \s+ ([A-Z]\w*(?: ::\w+)*) \s+ ((?: q | qq | qw ) \s* ([\x21-\x3F]) .*?               \3) \s* ; /oxmsgc) { return e_no($1,$2);  }
+    elsif (/\G \b no  \s+ ([A-Z]\w*(?: ::\w+)*) \s+ ((?: q | qq | qw ) \s* (\S)    (?:$q_char)*?           \3) \s* ; /oxmsgc) { return e_no($1,$2);  }
 
 # use else
     elsif (/\G \b use \b                                                              /oxmsgc) { return "use";               }
@@ -1811,10 +1818,10 @@ sub escape {
     elsif (/\G (?<![\w\$\@\%\&\*]) (\') /oxgc) {
         my $q_string = '';
         while (not /\G \z/oxgc) {
-            if    (/\G (\\\\)    /oxgc)              { $q_string .= $1;                   }
-            elsif (/\G (\\\')    /oxgc)              { $q_string .= $1;                   }
-            elsif (/\G \'        /oxgc)              { return e_q('', "'","'",$q_string); }
-            elsif (/\G ($q_char) /oxgc)              { $q_string .= $1;                   }
+            if    (/\G (\\\\)                 /oxgc) { $q_string .= $1;                   }
+            elsif (/\G (\\\')                 /oxgc) { $q_string .= $1;                   }
+            elsif (/\G \'                     /oxgc) { return e_q('', "'","'",$q_string); }
+            elsif (/\G ($q_char)              /oxgc) { $q_string .= $1;                   }
         }
         die __FILE__, ": Can't find string terminator anywhere before EOF";
     }
@@ -1823,10 +1830,10 @@ sub escape {
     elsif (/\G (\") /oxgc) {
         my $qq_string = '';
         while (not /\G \z/oxgc) {
-            if    (/\G (\\\\)    /oxgc)              { $qq_string .= $1;                    }
-            elsif (/\G (\\\")    /oxgc)              { $qq_string .= $1;                    }
-            elsif (/\G \"        /oxgc)              { return e_qq('', '"','"',$qq_string); }
-            elsif (/\G ($q_char) /oxgc)              { $qq_string .= $1;                    }
+            if    (/\G (\\\\)                 /oxgc) { $qq_string .= $1;                    }
+            elsif (/\G (\\\")                 /oxgc) { $qq_string .= $1;                    }
+            elsif (/\G \"                     /oxgc) { return e_qq('', '"','"',$qq_string); }
+            elsif (/\G ($q_char)              /oxgc) { $qq_string .= $1;                    }
         }
         die __FILE__, ": Can't find string terminator anywhere before EOF";
     }
@@ -1835,10 +1842,10 @@ sub escape {
     elsif (/\G (\`) /oxgc) {
         my $qx_string = '';
         while (not /\G \z/oxgc) {
-            if    (/\G (\\\\)    /oxgc)              { $qx_string .= $1;                    }
-            elsif (/\G (\\\`)    /oxgc)              { $qx_string .= $1;                    }
-            elsif (/\G \`        /oxgc)              { return e_qq('', '`','`',$qx_string); }
-            elsif (/\G ($q_char) /oxgc)              { $qx_string .= $1;                    }
+            if    (/\G (\\\\)                 /oxgc) { $qx_string .= $1;                    }
+            elsif (/\G (\\\`)                 /oxgc) { $qx_string .= $1;                    }
+            elsif (/\G \`                     /oxgc) { return e_qq('', '`','`',$qx_string); }
+            elsif (/\G ($q_char)              /oxgc) { $qx_string .= $1;                    }
         }
         die __FILE__, ": Can't find string terminator anywhere before EOF";
     }
@@ -1985,7 +1992,7 @@ sub escape {
     }
 
 # <<= <=> <= < operator
-    elsif (/\G (<<=|<=>|<=|<) (?= \s* [A-Za-z_0-9'"`\$\@\&\*\(\+\-] )/oxgc) {
+    elsif (/\G ( <<= | <=> | <= | < ) (?= \s* [A-Za-z_0-9'"`\$\@\&\*\(\+\-] )/oxgc) {
         return $1;
     }
 
@@ -2131,6 +2138,12 @@ E_STRING_LOOP:
             $slash = 'div';
         }
 
+# $', ${'} --> $', ${'}
+        elsif ($string =~ /\G ( \$' | \$\{'\}                                                                                 ) /oxmsgc) {
+            $e_string .= $1;
+            $slash = 'div';
+        }
+
 # $POSTMATCH, ${POSTMATCH}, ${^POSTMATCH} --> @{[Egbk::POSTMATCH()]}
         elsif ($string =~ /\G (                 \$ \s* POSTMATCH \b | \$ \s* \{ \s* POSTMATCH \s* \} | \$ \s* \{\^POSTMATCH\} ) /oxmsgc) {
             $e_string .= q{Egbk::POSTMATCH()};
@@ -2138,7 +2151,7 @@ E_STRING_LOOP:
         }
 
 # bareword
-        elsif ($string =~ /\G ( \{ \s* (?: tr|index|rindex|reverse) \s* \} ) /oxmsgc) {
+        elsif ($string =~ /\G ( \{ \s* (?: tr | index | rindex | reverse ) \s* \} ) /oxmsgc) {
             $e_string .= $1;
             $slash = 'div';
         }
@@ -2159,7 +2172,8 @@ E_STRING_LOOP:
             $slash = 'div';
         }
 
-# $1, $2, $3 --> $2, $3, $4 (only when multibyte anchoring is enable)
+# $1, $2, $3 --> $2, $3, $4 after s/// with multibyte anchoring
+# $1, $2, $3 --> $1, $2, $3 otherwise
         elsif ($string =~ /\G \$ ([1-9][0-9]*) /oxmsgc) {
             $e_string .= e_capture($1);
             $slash = 'div';
@@ -2201,7 +2215,7 @@ E_STRING_LOOP:
 
 # variable or function
         #                             $ @ % & *     $ #
-        elsif ($string =~ /\G ( (?: [\$\@\%\&\*] | \$\# | -> | \b sub \b) \s* (?: split|chop|index|rindex|lc|uc|fc|chr|ord|reverse|getc|tr|y|q|qq|qx|qw|m|s|qr|glob|lstat|opendir|stat|unlink|chdir) ) \b /oxmsgc) {
+        elsif ($string =~ /\G ( (?: [\$\@\%\&\*] | \$\# | -> | \b sub \b) \s* (?: split | chop | index | rindex | lc | uc | fc | chr | ord | reverse | getc | tr | y | q | qq | qx | qw | m | s | qr | glob | lstat | opendir | stat | unlink | chdir ) ) \b /oxmsgc) {
             $e_string .= $1;
             $slash = 'div';
         }
@@ -2247,58 +2261,57 @@ E_STRING_LOOP:
 
         elsif ($string =~ /\G (-[rwxoRWXOezfdlpSbcugkTB](?:\s+-[rwxoRWXOezfdlpSbcugkTB])+) (\$ \w+(?: ::\w+)* (?: (?: ->)? (?: \( (?:$qq_paren)*? \) | \{ (?:$qq_brace)+? \} | \[ (?:$qq_bracket)+? \] ) )*) /oxgc)
                                                                                                                           { $e_string .= "Egbk::filetest(qw($1),$2)"; $slash = 'm//'; }
-        elsif ($string =~ /\G (-[rwxoRWXOezfdlpSbcugkTB](?:\s+-[rwxoRWXOezfdlpSbcugkTB])+) \( ((?:$qq_paren)*?) \) /oxgc)
-                                                                                                                          { $e_string .= "Egbk::filetest(qw($1),$2)"; $slash = 'm//'; }
-        elsif ($string =~ /\G ((?:-[rwxoRWXOezfdlpSbcugkTB]\s+){2,}) (?= [a-z]+) /oxgc)                                   { $e_string .= "Egbk::filetest qw($1),";    $slash = 'm//'; }
-        elsif ($string =~ /\G ((?:-[rwxoRWXOezfdlpSbcugkTB]\s+){2,}) (\w+) /oxgc)                                         { $e_string .= "Egbk::filetest(qw($1),$2)"; $slash = 'm//'; }
+        elsif ($string =~ /\G (-[rwxoRWXOezfdlpSbcugkTB](?:\s+-[rwxoRWXOezfdlpSbcugkTB])+) \( ((?:$qq_paren)*?) \) /oxgc) { $e_string .= "Egbk::filetest(qw($1),$2)"; $slash = 'm//'; }
+        elsif ($string =~ /\G ((?:-[rwxoRWXOezfdlpSbcugkTB]\s+){2,}) (?= [a-z]+)                                   /oxgc) { $e_string .= "Egbk::filetest qw($1),";    $slash = 'm//'; }
+        elsif ($string =~ /\G ((?:-[rwxoRWXOezfdlpSbcugkTB]\s+){2,}) (\w+)                                         /oxgc) { $e_string .= "Egbk::filetest(qw($1),$2)"; $slash = 'm//'; }
 
-        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+    \s* (\") ((?:$qq_char)+?)             (\") /oxgc)    { $e_string .= "Egbk::$1(" . e_qq('',  $2,$4,$3) . ")"; $slash = 'm//'; }
-        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ qq \s* (\#) ((?:$qq_char)+?)             (\#) /oxgc)    { $e_string .= "Egbk::$1(" . e_qq('qq',$2,$4,$3) . ")"; $slash = 'm//'; }
-        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ qq \s* (\() ((?:$qq_paren)+?)            (\)) /oxgc)    { $e_string .= "Egbk::$1(" . e_qq('qq',$2,$4,$3) . ")"; $slash = 'm//'; }
-        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ qq \s* (\{) ((?:$qq_brace)+?)            (\}) /oxgc)    { $e_string .= "Egbk::$1(" . e_qq('qq',$2,$4,$3) . ")"; $slash = 'm//'; }
-        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ qq \s* (\[) ((?:$qq_bracket)+?)          (\]) /oxgc)    { $e_string .= "Egbk::$1(" . e_qq('qq',$2,$4,$3) . ")"; $slash = 'm//'; }
-        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ qq \s* (\<) ((?:$qq_angle)+?)            (\>) /oxgc)    { $e_string .= "Egbk::$1(" . e_qq('qq',$2,$4,$3) . ")"; $slash = 'm//'; }
-        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ qq \s* (\S) ((?:$qq_char)+?)             (\2) /oxgc)    { $e_string .= "Egbk::$1(" . e_qq('qq',$2,$4,$3) . ")"; $slash = 'm//'; }
+        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+    \s* (\") ((?:$qq_char)+?)                (\") /oxgc) { $e_string .= "Egbk::$1(" . e_qq('',  $2,$4,$3) . ")"; $slash = 'm//'; }
+        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ qq \s* (\#) ((?:$qq_char)+?)                (\#) /oxgc) { $e_string .= "Egbk::$1(" . e_qq('qq',$2,$4,$3) . ")"; $slash = 'm//'; }
+        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ qq \s* (\() ((?:$qq_paren)+?)               (\)) /oxgc) { $e_string .= "Egbk::$1(" . e_qq('qq',$2,$4,$3) . ")"; $slash = 'm//'; }
+        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ qq \s* (\{) ((?:$qq_brace)+?)               (\}) /oxgc) { $e_string .= "Egbk::$1(" . e_qq('qq',$2,$4,$3) . ")"; $slash = 'm//'; }
+        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ qq \s* (\[) ((?:$qq_bracket)+?)             (\]) /oxgc) { $e_string .= "Egbk::$1(" . e_qq('qq',$2,$4,$3) . ")"; $slash = 'm//'; }
+        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ qq \s* (\<) ((?:$qq_angle)+?)               (\>) /oxgc) { $e_string .= "Egbk::$1(" . e_qq('qq',$2,$4,$3) . ")"; $slash = 'm//'; }
+        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ qq \s* (\S) ((?:$qq_char)+?)                (\2) /oxgc) { $e_string .= "Egbk::$1(" . e_qq('qq',$2,$4,$3) . ")"; $slash = 'm//'; }
 
-        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+    \s* (\') ((?:\\\'|\\\\|$q_char)+?)    (\') /oxgc)    { $e_string .= "Egbk::$1(" . e_q ('',  $2,$4,$3) . ")"; $slash = 'm//'; }
-        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ q  \s* (\#) ((?:\\\#|\\\\|$q_char)+?)    (\#) /oxgc)    { $e_string .= "Egbk::$1(" . e_q ('q', $2,$4,$3) . ")"; $slash = 'm//'; }
-        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ q  \s* (\() ((?:\\\)|\\\\|$q_paren)+?)   (\)) /oxgc)    { $e_string .= "Egbk::$1(" . e_q ('q', $2,$4,$3) . ")"; $slash = 'm//'; }
-        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ q  \s* (\{) ((?:\\\}|\\\\|$q_brace)+?)   (\}) /oxgc)    { $e_string .= "Egbk::$1(" . e_q ('q', $2,$4,$3) . ")"; $slash = 'm//'; }
-        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ q  \s* (\[) ((?:\\\]|\\\\|$q_bracket)+?) (\]) /oxgc)    { $e_string .= "Egbk::$1(" . e_q ('q', $2,$4,$3) . ")"; $slash = 'm//'; }
-        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ q  \s* (\<) ((?:\\\>|\\\\|$q_angle)+?)   (\>) /oxgc)    { $e_string .= "Egbk::$1(" . e_q ('q', $2,$4,$3) . ")"; $slash = 'm//'; }
-        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ q  \s* (\S) ((?:\\\2|\\\\|$q_char)+?)    (\2) /oxgc)    { $e_string .= "Egbk::$1(" . e_q ('q', $2,$4,$3) . ")"; $slash = 'm//'; }
+        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+    \s* (\') ((?:\\\'|\\\\|$q_char)+?)       (\') /oxgc) { $e_string .= "Egbk::$1(" . e_q ('',  $2,$4,$3) . ")"; $slash = 'm//'; }
+        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ q  \s* (\#) ((?:\\\#|\\\\|$q_char)+?)       (\#) /oxgc) { $e_string .= "Egbk::$1(" . e_q ('q', $2,$4,$3) . ")"; $slash = 'm//'; }
+        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ q  \s* (\() ((?:\\\)|\\\\|$q_paren)+?)      (\)) /oxgc) { $e_string .= "Egbk::$1(" . e_q ('q', $2,$4,$3) . ")"; $slash = 'm//'; }
+        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ q  \s* (\{) ((?:\\\}|\\\\|$q_brace)+?)      (\}) /oxgc) { $e_string .= "Egbk::$1(" . e_q ('q', $2,$4,$3) . ")"; $slash = 'm//'; }
+        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ q  \s* (\[) ((?:\\\]|\\\\|$q_bracket)+?)    (\]) /oxgc) { $e_string .= "Egbk::$1(" . e_q ('q', $2,$4,$3) . ")"; $slash = 'm//'; }
+        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ q  \s* (\<) ((?:\\\>|\\\\|$q_angle)+?)      (\>) /oxgc) { $e_string .= "Egbk::$1(" . e_q ('q', $2,$4,$3) . ")"; $slash = 'm//'; }
+        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ q  \s* (\S) ((?:\\\2|\\\\|$q_char)+?)       (\2) /oxgc) { $e_string .= "Egbk::$1(" . e_q ('q', $2,$4,$3) . ")"; $slash = 'm//'; }
 
         elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s* (\$ \w+(?: ::\w+)* (?: (?: ->)? (?: \( (?:$qq_paren)*? \) | \{ (?:$qq_brace)+? \} | \[ (?:$qq_bracket)+? \] ) )*) /oxgc)
                                                                                                                           { $e_string .= "Egbk::$1($2)";      $slash = 'm//'; }
-        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s* \( ((?:$qq_paren)*?) \) /oxgc)                          { $e_string .= "Egbk::$1($2)";      $slash = 'm//'; }
-        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) (?= \s+ [a-z]+) /oxgc)                                      { $e_string .= "Egbk::$1";          $slash = 'm//'; }
-        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ (\w+) /oxgc)                                            { $e_string .= "Egbk::$1(::"."$2)"; $slash = 'm//'; }
-        elsif ($string =~ /\G -(t)                            \s+ (\w+) /oxgc)                                            { $e_string .= "-t $2";              $slash = 'm//'; }
-        elsif ($string =~ /\G \b lstat         (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) /oxgc) { $e_string .= 'Egbk::lstat';             $slash = 'm//'; }
-        elsif ($string =~ /\G \b stat          (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) /oxgc) { $e_string .= 'Egbk::stat';              $slash = 'm//'; }
+        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s* \( ((?:$qq_paren)*?) \)                          /oxgc) { $e_string .= "Egbk::$1($2)";      $slash = 'm//'; }
+        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) (?= \s+ [a-z]+)                                      /oxgc) { $e_string .= "Egbk::$1";          $slash = 'm//'; }
+        elsif ($string =~ /\G -([rwxoRWXOezsfdlpSbcugkTBMAC]) \s+ (\w+)                                            /oxgc) { $e_string .= "Egbk::$1(::"."$2)"; $slash = 'm//'; }
+        elsif ($string =~ /\G -(t)                            \s+ (\w+)                                            /oxgc) { $e_string .= "-t $2";              $slash = 'm//'; }
+        elsif ($string =~ /\G \b lstat         (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(])                                /oxgc) { $e_string .= 'Egbk::lstat';       $slash = 'm//'; }
+        elsif ($string =~ /\G \b stat          (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(])                                /oxgc) { $e_string .= 'Egbk::stat';        $slash = 'm//'; }
 
         # "-s '' ..." means file test "-s 'filename' ..." (not means "- s/// ...")
-        elsif ($string =~ /\G -s                               \s+    \s* (\") ((?:$qq_char)+?)             (\") /oxgc)    { $e_string .= '-s ' . e_qq('',  $1,$3,$2); $slash = 'm//'; }
-        elsif ($string =~ /\G -s                               \s+ qq \s* (\#) ((?:$qq_char)+?)             (\#) /oxgc)    { $e_string .= '-s ' . e_qq('qq',$1,$3,$2); $slash = 'm//'; }
-        elsif ($string =~ /\G -s                               \s+ qq \s* (\() ((?:$qq_paren)+?)            (\)) /oxgc)    { $e_string .= '-s ' . e_qq('qq',$1,$3,$2); $slash = 'm//'; }
-        elsif ($string =~ /\G -s                               \s+ qq \s* (\{) ((?:$qq_brace)+?)            (\}) /oxgc)    { $e_string .= '-s ' . e_qq('qq',$1,$3,$2); $slash = 'm//'; }
-        elsif ($string =~ /\G -s                               \s+ qq \s* (\[) ((?:$qq_bracket)+?)          (\]) /oxgc)    { $e_string .= '-s ' . e_qq('qq',$1,$3,$2); $slash = 'm//'; }
-        elsif ($string =~ /\G -s                               \s+ qq \s* (\<) ((?:$qq_angle)+?)            (\>) /oxgc)    { $e_string .= '-s ' . e_qq('qq',$1,$3,$2); $slash = 'm//'; }
-        elsif ($string =~ /\G -s                               \s+ qq \s* (\S) ((?:$qq_char)+?)             (\1) /oxgc)    { $e_string .= '-s ' . e_qq('qq',$1,$3,$2); $slash = 'm//'; }
+        elsif ($string =~ /\G -s                               \s+    \s* (\") ((?:$qq_char)+?)                (\") /oxgc) { $e_string .= '-s ' . e_qq('',  $1,$3,$2); $slash = 'm//'; }
+        elsif ($string =~ /\G -s                               \s+ qq \s* (\#) ((?:$qq_char)+?)                (\#) /oxgc) { $e_string .= '-s ' . e_qq('qq',$1,$3,$2); $slash = 'm//'; }
+        elsif ($string =~ /\G -s                               \s+ qq \s* (\() ((?:$qq_paren)+?)               (\)) /oxgc) { $e_string .= '-s ' . e_qq('qq',$1,$3,$2); $slash = 'm//'; }
+        elsif ($string =~ /\G -s                               \s+ qq \s* (\{) ((?:$qq_brace)+?)               (\}) /oxgc) { $e_string .= '-s ' . e_qq('qq',$1,$3,$2); $slash = 'm//'; }
+        elsif ($string =~ /\G -s                               \s+ qq \s* (\[) ((?:$qq_bracket)+?)             (\]) /oxgc) { $e_string .= '-s ' . e_qq('qq',$1,$3,$2); $slash = 'm//'; }
+        elsif ($string =~ /\G -s                               \s+ qq \s* (\<) ((?:$qq_angle)+?)               (\>) /oxgc) { $e_string .= '-s ' . e_qq('qq',$1,$3,$2); $slash = 'm//'; }
+        elsif ($string =~ /\G -s                               \s+ qq \s* (\S) ((?:$qq_char)+?)                (\1) /oxgc) { $e_string .= '-s ' . e_qq('qq',$1,$3,$2); $slash = 'm//'; }
 
-        elsif ($string =~ /\G -s                               \s+    \s* (\') ((?:\\\'|\\\\|$q_char)+?)    (\') /oxgc)    { $e_string .= '-s ' . e_q ('',  $1,$3,$2); $slash = 'm//'; }
-        elsif ($string =~ /\G -s                               \s+ q  \s* (\#) ((?:\\\#|\\\\|$q_char)+?)    (\#) /oxgc)    { $e_string .= '-s ' . e_q ('q', $1,$3,$2); $slash = 'm//'; }
-        elsif ($string =~ /\G -s                               \s+ q  \s* (\() ((?:\\\)|\\\\|$q_paren)+?)   (\)) /oxgc)    { $e_string .= '-s ' . e_q ('q', $1,$3,$2); $slash = 'm//'; }
-        elsif ($string =~ /\G -s                               \s+ q  \s* (\{) ((?:\\\}|\\\\|$q_brace)+?)   (\}) /oxgc)    { $e_string .= '-s ' . e_q ('q', $1,$3,$2); $slash = 'm//'; }
-        elsif ($string =~ /\G -s                               \s+ q  \s* (\[) ((?:\\\]|\\\\|$q_bracket)+?) (\]) /oxgc)    { $e_string .= '-s ' . e_q ('q', $1,$3,$2); $slash = 'm//'; }
-        elsif ($string =~ /\G -s                               \s+ q  \s* (\<) ((?:\\\>|\\\\|$q_angle)+?)   (\>) /oxgc)    { $e_string .= '-s ' . e_q ('q', $1,$3,$2); $slash = 'm//'; }
-        elsif ($string =~ /\G -s                               \s+ q  \s* (\S) ((?:\\\1|\\\\|$q_char)+?)    (\1) /oxgc)    { $e_string .= '-s ' . e_q ('q', $1,$3,$2); $slash = 'm//'; }
+        elsif ($string =~ /\G -s                               \s+    \s* (\') ((?:\\\'|\\\\|$q_char)+?)       (\') /oxgc) { $e_string .= '-s ' . e_q ('',  $1,$3,$2); $slash = 'm//'; }
+        elsif ($string =~ /\G -s                               \s+ q  \s* (\#) ((?:\\\#|\\\\|$q_char)+?)       (\#) /oxgc) { $e_string .= '-s ' . e_q ('q', $1,$3,$2); $slash = 'm//'; }
+        elsif ($string =~ /\G -s                               \s+ q  \s* (\() ((?:\\\)|\\\\|$q_paren)+?)      (\)) /oxgc) { $e_string .= '-s ' . e_q ('q', $1,$3,$2); $slash = 'm//'; }
+        elsif ($string =~ /\G -s                               \s+ q  \s* (\{) ((?:\\\}|\\\\|$q_brace)+?)      (\}) /oxgc) { $e_string .= '-s ' . e_q ('q', $1,$3,$2); $slash = 'm//'; }
+        elsif ($string =~ /\G -s                               \s+ q  \s* (\[) ((?:\\\]|\\\\|$q_bracket)+?)    (\]) /oxgc) { $e_string .= '-s ' . e_q ('q', $1,$3,$2); $slash = 'm//'; }
+        elsif ($string =~ /\G -s                               \s+ q  \s* (\<) ((?:\\\>|\\\\|$q_angle)+?)      (\>) /oxgc) { $e_string .= '-s ' . e_q ('q', $1,$3,$2); $slash = 'm//'; }
+        elsif ($string =~ /\G -s                               \s+ q  \s* (\S) ((?:\\\1|\\\\|$q_char)+?)       (\1) /oxgc) { $e_string .= '-s ' . e_q ('q', $1,$3,$2); $slash = 'm//'; }
 
         elsif ($string =~ /\G -s                               \s* (\$ \w+(?: ::\w+)* (?: (?: ->)? (?: \( (?:$qq_paren)*? \) | \{ (?:$qq_brace)+? \} | \[ (?:$qq_bracket)+? \] ) )*) /oxgc)
                                                                                                                            { $e_string .= "-s $1";   $slash = 'm//'; }
-        elsif ($string =~ /\G -s                               \s* \( ((?:$qq_paren)*?) \) /oxgc)                          { $e_string .= "-s ($1)"; $slash = 'm//'; }
-        elsif ($string =~ /\G -s                               (?= \s+ [a-z]+) /oxgc)                                      { $e_string .= '-s';      $slash = 'm//'; }
-        elsif ($string =~ /\G -s                               \s+ (\w+) /oxgc)                                            { $e_string .= "-s $1";   $slash = 'm//'; }
+        elsif ($string =~ /\G -s                               \s* \( ((?:$qq_paren)*?) \)                          /oxgc) { $e_string .= "-s ($1)"; $slash = 'm//'; }
+        elsif ($string =~ /\G -s                               (?= \s+ [a-z]+)                                      /oxgc) { $e_string .= '-s';      $slash = 'm//'; }
+        elsif ($string =~ /\G -s                               \s+ (\w+)                                            /oxgc) { $e_string .= "-s $1";   $slash = 'm//'; }
 
         elsif ($string =~ /\G \b bytes::length (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) /oxgc) { $e_string .= 'length';                   $slash = 'm//'; }
         elsif ($string =~ /\G \b bytes::chr    (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) /oxgc) { $e_string .= 'chr';                      $slash = 'm//'; }
@@ -2311,11 +2324,11 @@ E_STRING_LOOP:
         elsif ($string =~ /\G \b uc \b                                              /oxgc) { $e_string .= 'Egbk::uc_';               $slash = 'm//'; }
         elsif ($string =~ /\G \b ucfirst \b                                         /oxgc) { $e_string .= 'Egbk::ucfirst_';          $slash = 'm//'; }
         elsif ($string =~ /\G \b fc \b                                              /oxgc) { $e_string .= 'Egbk::fc_';               $slash = 'm//'; }
+        elsif ($string =~ /\G \b lstat \b                                           /oxgc) { $e_string .= 'Egbk::lstat_';            $slash = 'm//'; }
+        elsif ($string =~ /\G \b stat \b                                            /oxgc) { $e_string .= 'Egbk::stat_';             $slash = 'm//'; }
         elsif ($string =~ /\G    (-[rwxoRWXOezfdlpSbcugkTB](?:\s+-[rwxoRWXOezfdlpSbcugkTB])+)
                                                                  \b                 /oxgc) { $e_string .= "Egbk::filetest_(qw($1))"; $slash = 'm//'; }
         elsif ($string =~ /\G    -([rwxoRWXOezsfdlpSbcugkTBMAC]) \b                 /oxgc) { $e_string .= "Egbk::${1}_";             $slash = 'm//'; }
-        elsif ($string =~ /\G \b lstat \b                                           /oxgc) { $e_string .= 'Egbk::lstat_';            $slash = 'm//'; }
-        elsif ($string =~ /\G \b stat \b                                            /oxgc) { $e_string .= 'Egbk::stat_';             $slash = 'm//'; }
         elsif ($string =~ /\G    -s                              \b                 /oxgc) { $e_string .= '-s ';                      $slash = 'm//'; }
 
         elsif ($string =~ /\G \b bytes::length \b                                   /oxgc) { $e_string .= 'length';                   $slash = 'm//'; }
@@ -2351,13 +2364,13 @@ E_STRING_LOOP:
                 if ($string =~ /\G (\#) ((?:$qq_char)*?) (\#) /oxgc)                             { $e_string .= e_chdir('qq',$1,$3,$2);   next E_STRING_LOOP; } # qq# #  --> qr # #
                 else {
                     while ($string !~ /\G \z/oxgc) {
-                        if    ($string =~ /\G (\s+|\#.*)                             /oxgc)      { $e_string .= $1; }
-                        elsif ($string =~ /\G (\()          ((?:$qq_paren)*?)   (\)) /oxgc)      { $e_string .= e_chdir('qq',$1,$3,$2);   next E_STRING_LOOP; } # qq ( ) --> qr ( )
-                        elsif ($string =~ /\G (\{)          ((?:$qq_brace)*?)   (\}) /oxgc)      { $e_string .= e_chdir('qq',$1,$3,$2);   next E_STRING_LOOP; } # qq { } --> qr { }
-                        elsif ($string =~ /\G (\[)          ((?:$qq_bracket)*?) (\]) /oxgc)      { $e_string .= e_chdir('qq',$1,$3,$2);   next E_STRING_LOOP; } # qq [ ] --> qr [ ]
-                        elsif ($string =~ /\G (\<)          ((?:$qq_angle)*?)   (\>) /oxgc)      { $e_string .= e_chdir('qq',$1,$3,$2);   next E_STRING_LOOP; } # qq < > --> qr < >
-                        elsif ($string =~ /\G ([*\-:?\\^|]) ((?:$qq_char)*?)    (\1) /oxgc)      { $e_string .= e_chdir('qq','{','}',$2); next E_STRING_LOOP; } # qq | | --> qr { }
-                        elsif ($string =~ /\G (\S)          ((?:$qq_char)*?)    (\1) /oxgc)      { $e_string .= e_chdir('qq',$1,$3,$2);   next E_STRING_LOOP; } # qq * * --> qr * *
+                        if    ($string =~ /\G (\s+|\#.*)                                  /oxgc) { $e_string .= $1; }
+                        elsif ($string =~ /\G (\()          ((?:$qq_paren)*?)   (\))      /oxgc) { $e_string .= e_chdir('qq',$1,$3,$2);   next E_STRING_LOOP; } # qq ( ) --> qr ( )
+                        elsif ($string =~ /\G (\{)          ((?:$qq_brace)*?)   (\})      /oxgc) { $e_string .= e_chdir('qq',$1,$3,$2);   next E_STRING_LOOP; } # qq { } --> qr { }
+                        elsif ($string =~ /\G (\[)          ((?:$qq_bracket)*?) (\])      /oxgc) { $e_string .= e_chdir('qq',$1,$3,$2);   next E_STRING_LOOP; } # qq [ ] --> qr [ ]
+                        elsif ($string =~ /\G (\<)          ((?:$qq_angle)*?)   (\>)      /oxgc) { $e_string .= e_chdir('qq',$1,$3,$2);   next E_STRING_LOOP; } # qq < > --> qr < >
+                        elsif ($string =~ /\G ([*\-:?\\^|]) ((?:$qq_char)*?)    (\1)      /oxgc) { $e_string .= e_chdir('qq','{','}',$2); next E_STRING_LOOP; } # qq | | --> qr { }
+                        elsif ($string =~ /\G (\S)          ((?:$qq_char)*?)    (\1)      /oxgc) { $e_string .= e_chdir('qq',$1,$3,$2);   next E_STRING_LOOP; } # qq * * --> qr * *
                     }
                     die __FILE__, ": Can't find string terminator anywhere before EOF";
                 }
@@ -2608,16 +2621,17 @@ E_STRING_LOOP:
         elsif ($string =~ /\G (?<![\w\$\@\%\&\*]) (\') ((?:\\\'|\\\\|$q_char)*?) (\') /oxgc) { $e_string .= e_q('',$1,$3,$2);  }
 
 # ""
-        elsif ($string =~ /\G (\") ((?:$qq_char)*?) (\") /oxgc)                              { $e_string .= e_qq('',$1,$3,$2); }
+        elsif ($string =~ /\G (\") ((?:$qq_char)*?) (\")                              /oxgc) { $e_string .= e_qq('',$1,$3,$2); }
 
 # ``
-        elsif ($string =~ /\G (\`) ((?:$qq_char)*?) (\`) /oxgc)                              { $e_string .= e_qq('',$1,$3,$2); }
+        elsif ($string =~ /\G (\`) ((?:$qq_char)*?) (\`)                              /oxgc) { $e_string .= e_qq('',$1,$3,$2); }
 
 # <<= <=> <= < operator
-        elsif ($string =~ /\G (<<=|<=>|<=|<) (?= \s* [A-Za-z_0-9'"`\$\@\&\*\(\+\-] )/oxgc)   { $e_string .= $1;                }
+        elsif ($string =~ /\G ( <<= | <=> | <= | < ) (?= \s* [A-Za-z_0-9'"`\$\@\&\*\(\+\-] )/oxgc)
+                                                                                             { $e_string .= $1;                }
 
 # <FILEHANDLE>
-        elsif ($string =~ /\G (<[\$]?[A-Za-z_][A-Za-z_0-9]*>) /oxgc)                         { $e_string .= $1;                }
+        elsif ($string =~ /\G (<[\$]?[A-Za-z_][A-Za-z_0-9]*>)                         /oxgc) { $e_string .= $1;                }
 
 # <WILDCARD>   --- glob
         elsif ($string =~ /\G < ((?:$q_char)+?) > /oxgc) {
@@ -3056,7 +3070,8 @@ sub e_qq {
         elsif ($char[$i] =~ /\A \$\$ \z/oxms) {
         }
 
-        # $1, $2, $3 --> $2, $3, $4 (only when multibyte anchoring is enable)
+        # $1, $2, $3 --> $2, $3, $4 after s/// with multibyte anchoring
+        # $1, $2, $3 --> $1, $2, $3 otherwise
         elsif ($char[$i] =~ /\A \$ ([1-9][0-9]*) \z/oxms) {
             $char[$i] = e_capture($1);
         }
@@ -3281,7 +3296,8 @@ sub e_heredoc {
         elsif ($char[$i] =~ /\A \$\$ \z/oxms) {
         }
 
-        # $1, $2, $3 --> $2, $3, $4 (only when multibyte anchoring is enable)
+        # $1, $2, $3 --> $2, $3, $4 after s/// with multibyte anchoring
+        # $1, $2, $3 --> $1, $2, $3 otherwise
         elsif ($char[$i] =~ /\A \$ ([1-9][0-9]*) \z/oxms) {
             $char[$i] = e_capture($1);
         }
@@ -3677,7 +3693,8 @@ sub e_qr {
         elsif ($char[$i] =~ /\A \$\$ \z/oxms) {
         }
 
-        # $1, $2, $3 --> $2, $3, $4 (only when multibyte anchoring is enable)
+        # $1, $2, $3 --> $2, $3, $4 after s/// with multibyte anchoring
+        # $1, $2, $3 --> $1, $2, $3 otherwise
         elsif ($char[$i] =~ /\A \$ ([1-9][0-9]*) \z/oxms) {
             $char[$i] = e_capture($1);
             if ($ignorecase) {
@@ -4382,7 +4399,8 @@ sub e_s1 {
         elsif ($char[$i] =~ /\A \$\$ \z/oxms) {
         }
 
-        # $1, $2, $3 --> $2, $3, $4 (only when multibyte anchoring is enable)
+        # $1, $2, $3 --> $2, $3, $4 after s/// with multibyte anchoring
+        # $1, $2, $3 --> $1, $2, $3 otherwise
         elsif ($char[$i] =~ /\A \$ ([1-9][0-9]*) \z/oxms) {
             $char[$i] = e_capture($1);
             if ($ignorecase) {
@@ -5259,7 +5277,8 @@ sub e_split {
         elsif ($char[$i] =~ /\A \$\$ \z/oxms) {
         }
 
-        # $1, $2, $3 --> $2, $3, $4 (only when multibyte anchoring is enable)
+        # $1, $2, $3 --> $2, $3, $4 after s/// with multibyte anchoring
+        # $1, $2, $3 --> $1, $2, $3 otherwise
         elsif ($char[$i] =~ /\A \$ ([1-9][0-9]*) \z/oxms) {
             $char[$i] = e_capture($1);
             if ($ignorecase) {
@@ -6980,12 +6999,15 @@ GBK::substr($string, 13, 4, "JPerl");
   Before          After                Works as
   -------------------------------------------------------------------------------------------
   $`              Egbk::PREMATCH()    CORE::substr($&,0,CORE::length($&)-CORE::length($1))
+  ${`}            Egbk::PREMATCH()    CORE::substr($&,0,CORE::length($&)-CORE::length($1))
   $PREMATCH       Egbk::PREMATCH()    CORE::substr($&,0,CORE::length($&)-CORE::length($1))
   ${^PREMATCH}    Egbk::PREMATCH()    CORE::substr($&,0,CORE::length($&)-CORE::length($1))
   $&              Egbk::MATCH()       $1
+  ${&}            Egbk::MATCH()       $1
   $MATCH          Egbk::MATCH()       $1
   ${^MATCH}       Egbk::MATCH()       $1
-  $'              Egbk::POSTMATCH()   $'
+  $'              $'                   $'
+  ${'}            ${'}                 $'
   $POSTMATCH      Egbk::POSTMATCH()   $'
   ${^POSTMATCH}   Egbk::POSTMATCH()   $'
   -------------------------------------------------------------------------------------------

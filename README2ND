@@ -1,14 +1,12 @@
 NAME
 
-       Char::GBK - Source code filter for GBK script (Imitation JPerl)
+       GBK - Source code filter for GBK script (Imitation JPerl)
 
 SYNOPSIS
 
     In your script:
 
-      use Char::GBK; # CPAN formal style
-         or
-      use GBK; # casual style
+      use GBK;
 
     At command prompt:
 
