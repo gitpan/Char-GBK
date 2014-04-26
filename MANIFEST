@@ -371,3 +371,4 @@ t/362_filetest.t
 t/363_filetest.t
 t/364_useversion.t
 t/365_useversion.t
+t/366_charclass.t
