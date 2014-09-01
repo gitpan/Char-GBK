@@ -6,9 +6,9 @@ BEGIN {
     print "1..9\n";
     if ($] >= 5.020) {
         require feature;
-        feature->import('signatures');
+        feature::->import('signatures');
         require warnings;
-        warnings->unimport('experimental::signatures');
+        warnings::->unimport('experimental::signatures');
     }
     else {
         for my $tno (1 .. 9) {
