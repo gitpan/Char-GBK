@@ -17,7 +17,7 @@ use 5.00503;    # Galapagos Consensus 1998 for primetools
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 1.00 $ =~ /(\d+)/oxmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 1.01 $ =~ /(\d+)/oxmsg;
 
 BEGIN {
     if ($^X =~ / jperl /oxmsi) {
@@ -524,7 +524,9 @@ sub GBK::escape_script {
         # in Chapter 5: Pattern Matching
         # of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
 
-        $e_script .= sprintf("use Egbk %s.0;\n", $GBK::VERSION); # require run-time routines version
+        # '...' quote to avoid "Octal number in vector unsupported" on perl 5.6
+
+        $e_script .= sprintf("use Egbk '%s.0'; # 'quote' for perl5.6\n", $GBK::VERSION); # require run-time routines version
 
         # use GBK version qw(ord reverse getc);
         $function_ord     = 'ord';
